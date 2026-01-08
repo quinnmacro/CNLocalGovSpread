@@ -1,0 +1,58 @@
+# ============================================================================
+# 中国地方政府债券利差高级计量经济学框架 - Python 依赖
+# Advanced Econometric Framework for China Local Government Bond Spread
+# ============================================================================
+
+# Core Scientific Computing
+numpy>=1.21.0
+pandas>=1.3.0
+scipy>=1.7.0
+
+# Time Series and Econometrics
+statsmodels>=0.13.0          # Kalman Filter (SARIMAX), statistical tests
+arch>=5.0.0                  # GARCH models (GARCH, EGARCH, GJR-GARCH)
+
+# Visualization
+matplotlib>=3.4.0            # Basic plotting
+plotly>=5.0.0               # Interactive charts with Chinese support
+kaleido>=0.2.0              # Plotly static image export (optional)
+
+# Jupyter Environment
+jupyter>=1.0.0
+notebook>=6.4.0
+ipywidgets>=7.6.0           # Interactive widgets for notebook
+
+# Data Quality & Utilities
+scikit-learn>=0.24.0        # For additional statistical tools (optional)
+
+# ============================================================================
+# Optional: Wind Python API (仅生产环境需要)
+# ============================================================================
+# WindPy>=1.0.0  # 取消注释以启用 Wind EDB 数据接口
+#                # 注意: 需要有效的 Wind 终端授权
+#                # 安装方法: pip install WindPy
+#                # 或从 Wind 官网下载安装包
+
+# ============================================================================
+# Development Tools (可选)
+# ============================================================================
+# pytest>=6.2.0              # Unit testing
+# black>=21.0                # Code formatting
+# flake8>=3.9.0              # Code linting
+# jupyter-contrib-nbextensions  # Notebook extensions
+
+# ============================================================================
+# 版本说明
+# ============================================================================
+# - Python 版本要求: >= 3.8
+# - 所有依赖均为 PyPI 官方版本
+# - 建议使用虚拟环境（venv 或 conda）隔离依赖
+#
+# 安装方式:
+#   pip install -r requirements.txt
+#
+# 或使用 conda:
+#   conda create -n bond_spread python=3.9
+#   conda activate bond_spread
+#   pip install -r requirements.txt
+# ============================================================================
