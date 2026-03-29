@@ -3,7 +3,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
-![Tests](https://img.shields.io/badge/Tests-17%20passed-brightgreen.svg)
+![Version](https://img.shields.io/badge/Version-2.0.0-brightgreen.svg)
 
 **Author: Quinn Liu**
 
@@ -33,6 +33,12 @@ Quinn Liu is a senior fixed income investment professional with 8+ years of expe
 2. **卡尔曼滤波器** - 从市场噪音中提取真实信号
 3. **极值理论 (EVT)** - 基于 GPD 的尾部风险量化
 
+✅ **交互式Dashboard** - Streamlit 现代化仪表板 (v2.0新增)
+- 深色/浅色双主题切换
+- 情景分析（压力测试、蒙特卡洛模拟）
+- 风险预警系统
+- 报告生成中心（PDF/Excel/HTML）
+
 ✅ **交互式可视化** - 使用 Plotly 生成专业图表（中文标注）
 
 ✅ **战略输出报告** - 自动生成可执行的交易建议和风险预警
@@ -50,7 +56,12 @@ CNLocalGovSpread/
 │   ├── kalman.py                 # 卡尔曼滤波器
 │   ├── evt.py                    # 极值理论分析
 │   ├── visualization.py          # 可视化函数
+│   ├── styles.py                 # 主题样式系统 (v2.0)
+│   ├── scenarios.py              # 情景分析模块 (v2.0)
+│   ├── alerts.py                 # 风险预警系统 (v2.0)
+│   ├── report_gen.py             # 报告生成中心 (v2.0)
 │   └── report.py                 # 战略报告生成
+├── dashboard.py                  # Streamlit仪表板 (v2.0)
 ├── notebooks/
 │   └── analysis.ipynb            # 主分析Notebook
 ├── tests/
@@ -87,6 +98,12 @@ pytest tests/ -v
 ```bash
 cd notebooks
 jupyter notebook analysis.ipynb
+```
+
+### 运行Dashboard (v2.0)
+
+```bash
+streamlit run dashboard.py
 ```
 
 ---
