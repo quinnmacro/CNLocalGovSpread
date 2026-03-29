@@ -48,23 +48,25 @@ def add_range_selector(fig, dark_mode=False):
 
 
 def get_theme_config(theme='light'):
-    """获取主题配置 - 透明背景"""
+    """获取主题配置 - 现代化透明背景"""
     if theme == 'dark':
         return {
             'template': 'plotly_dark',
             'paper_bgcolor': 'rgba(0,0,0,0)',
             'plot_bgcolor': 'rgba(0,0,0,0)',
-            'font_color': '#F1F5F9',
-            'grid_color': '#475569',
-            'line_color': '#475569'
+            'font_color': '#F8FAFC',
+            'grid_color': 'rgba(71, 85, 105, 0.3)',
+            'line_color': 'rgba(71, 85, 105, 0.5)',
+            'colors': ['#3B82F6', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444']
         }
     return {
         'template': 'none',
         'paper_bgcolor': 'rgba(0,0,0,0)',
         'plot_bgcolor': 'rgba(0,0,0,0)',
-        'font_color': '#1E293B',
-        'grid_color': '#E2E8F0',
-        'line_color': '#CBD5E1'
+        'font_color': '#0F172A',
+        'grid_color': 'rgba(226, 232, 240, 0.8)',
+        'line_color': 'rgba(203, 213, 225, 0.8)',
+        'colors': ['#2563EB', '#7C3AED', '#0891B2', '#059669', '#D97706', '#DC2626']
     }
 
 

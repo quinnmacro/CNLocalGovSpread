@@ -32,7 +32,7 @@ from .visualization import (
 from .report import generate_strategic_report
 from .export import export_to_excel
 
-__version__ = '2.1.0'
+__version__ = '2.2.0'
 __author__ = 'Quinn Liu'
 
 __all__ = [

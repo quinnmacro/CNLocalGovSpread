@@ -1,6 +1,6 @@
 """
 中国地方债利差分析仪表板
-Streamlit 现代化版本 v2.1
+Streamlit 现代化版本 v2.2 - 专业金融分析界面
 
 功能模块:
 1. 首页仪表板 - 关键指标与迷你图表
@@ -90,7 +90,7 @@ def safe_metric(label, value, unit="", help_text=None, delta=None):
 
 
 # ============================================================================
-# 页面配置
+# 页面配置 - 深色主题默认
 # ============================================================================
 
 st.set_page_config(
@@ -100,7 +100,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 主题切换
+# 主题切换 (默认深色)
 theme = get_theme_toggle()
 apply_theme(theme)
 
@@ -115,7 +115,7 @@ render_page_header(
 # ============================================================================
 
 with st.sidebar:
-    st.header("⚙️ 参数配置")
+    st.markdown("### ⚙️ 配置")
 
     data_source = st.selectbox(
         "数据源",
@@ -133,35 +133,32 @@ with st.sidebar:
             'spread_5y': '5年期',
             'spread_10y': '10年期',
             'spread_30y': '30年期'
-        }.get(x, x),
-        help="选择不同期限的利差数据"
+        }.get(x, x)
     )
 
     st.divider()
 
-    st.subheader("📅 日期范围")
+    st.markdown("**📅 日期范围**")
     col1, col2 = st.columns(2)
     with col1:
-        start_date = st.date_input("开始日期", value=pd.Timestamp("2018-01-01"))
+        start_date = st.date_input("开始", value=pd.Timestamp("2018-01-01"), label_visibility="collapsed")
     with col2:
-        end_date = st.date_input("结束日期", value=pd.Timestamp("2026-03-31"))
+        end_date = st.date_input("结束", value=pd.Timestamp("2026-03-31"), label_visibility="collapsed")
 
     st.divider()
 
-    st.subheader("⚠️ 风险参数")
-    var_confidence = st.slider("VaR置信水平", 0.90, 0.99, 0.99, format="%.2f")
-    evt_threshold = st.slider("EVT阈值百分位", 0.90, 0.99, 0.95, format="%.2f")
+    st.markdown("**⚠️ 风险参数**")
+    var_confidence = st.slider("VaR置信水平", 0.90, 0.99, 0.99, format="%.2f", label_visibility="collapsed")
+    evt_threshold = st.slider("EVT阈值", 0.90, 0.99, 0.95, format="%.2f", label_visibility="collapsed")
 
     st.divider()
-    run_analysis = st.button("🚀 运行分析", type="primary", use_container_width=True)
+    run_analysis = st.button("🔄 重新分析", type="primary", use_container_width=True)
 
     if data_source == "CSV":
         if os.path.exists("data/local_gov_spread.csv"):
-            st.success("✓ CSV数据已就绪")
+            st.success("✓ 数据就绪")
         else:
-            st.error("✗ CSV数据文件不存在")
-    elif data_source == "WIND_EDB":
-        st.warning("⚠️ 需要Wind终端连接")
+            st.error("✗ 数据文件不存在")
 
 # ============================================================================
 # 主分析逻辑 - 自动预加载
@@ -496,7 +493,7 @@ if st.session_state.analysis_done:
 # 页脚
 # ============================================================================
 render_footer(
-    version='2.1.0',
+    version='2.2.0',
     author='Quinn Liu',
     github='https://github.com/quinnmacro/CNLocalGovSpread',
     linkedin='https://www.linkedin.com/in/liulu-math'
