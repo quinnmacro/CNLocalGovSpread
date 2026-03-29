@@ -164,13 +164,20 @@ with st.sidebar:
         st.warning("⚠️ 需要Wind终端连接")
 
 # ============================================================================
-# 主分析逻辑
+# 主分析逻辑 - 自动预加载
 # ============================================================================
 
-if 'analysis_done' not in st.session_state:
-    st.session_state.analysis_done = False
+# 首次访问自动加载
+need_load = 'analysis_done' not in st.session_state or not st.session_state.analysis_done
 
-if run_analysis:
+if need_load:
+    # 预加载遮罩
+    load_placeholder = st.empty()
+
+if run_analysis or need_load:
+    if need_load:
+        load_placeholder = st.status("⚡ 正在初始化分析引擎...", expanded=True)
+
     config = {
         'SOURCE': data_source,
         'CSV_PATH': 'data/local_gov_spread.csv',
@@ -185,56 +192,69 @@ if run_analysis:
         'EVT_THRESHOLD_PERCENTILE': evt_threshold
     }
 
-    with st.spinner("📥 加载数据..."):
-        try:
-            engine = DataEngine(config)
-            engine.load_data()
-            clean_data = engine.clean_data()
-            returns = engine.get_returns()
-            st.session_state.clean_data = clean_data
-            st.session_state.returns = returns
-            st.success(f"✓ 数据加载完成: {len(clean_data)} 个交易日")
-        except Exception as e:
-            st.error(f"数据加载失败: {str(e)}")
-            st.stop()
+    # 数据加载
+    if need_load:
+        load_placeholder.update(label="📥 加载数据...")
+    try:
+        engine = DataEngine(config)
+        engine.load_data()
+        clean_data = engine.clean_data()
+        returns = engine.get_returns()
+        st.session_state.clean_data = clean_data
+        st.session_state.returns = returns
+    except Exception as e:
+        st.error(f"数据加载失败: {str(e)}")
+        st.stop()
 
-    with st.spinner("拟合模型..."):
-        try:
-            kalman = KalmanSignalExtractor(clean_data['spread'])
-            smoothed = kalman.fit()
-            deviation = kalman.get_signal_deviation()
-            st.session_state.kalman = kalman
-            st.session_state.smoothed = smoothed
-            st.session_state.deviation = deviation
-        except Exception as e:
-            st.error(f"卡尔曼滤波拟合失败: {str(e)}")
-            st.stop()
+    # 卡尔曼滤波
+    if need_load:
+        load_placeholder.update(label="📈 拟合卡尔曼滤波...")
+    try:
+        kalman = KalmanSignalExtractor(clean_data['spread'])
+        smoothed = kalman.fit()
+        deviation = kalman.get_signal_deviation()
+        st.session_state.kalman = kalman
+        st.session_state.smoothed = smoothed
+        st.session_state.deviation = deviation
+    except Exception as e:
+        st.error(f"卡尔曼滤波拟合失败: {str(e)}")
+        st.stop()
 
-        try:
-            vol_modeler = VolatilityModeler(returns)
-            winner = vol_modeler.run_tournament()
-            winner_vol = vol_modeler.get_conditional_volatility(winner)
-            st.session_state.vol_modeler = vol_modeler
-            st.session_state.winner = winner
-            st.session_state.winner_vol = winner_vol
-        except Exception as e:
-            st.error(f"波动率建模失败: {str(e)}")
-            st.stop()
+    # GARCH模型
+    if need_load:
+        load_placeholder.update(label="📉 运行GARCH锦标赛...")
+    try:
+        vol_modeler = VolatilityModeler(returns)
+        winner = vol_modeler.run_tournament()
+        winner_vol = vol_modeler.get_conditional_volatility(winner)
+        st.session_state.vol_modeler = vol_modeler
+        st.session_state.winner = winner
+        st.session_state.winner_vol = winner_vol
+    except Exception as e:
+        st.error(f"波动率建模失败: {str(e)}")
+        st.stop()
 
-        try:
-            evt = EVTRiskAnalyzer(returns, threshold_percentile=evt_threshold, confidence=var_confidence)
-            evt.fit_gpd()
-            var = evt.calculate_var()
-            es = evt.calculate_es()
-            st.session_state.evt = evt
-            st.session_state.var = var
-            st.session_state.es = es
-        except Exception as e:
-            st.session_state.evt = None
-            st.session_state.var = returns.quantile(var_confidence)
-            st.session_state.es = returns.quantile(0.999)
+    # EVT风险分析
+    if need_load:
+        load_placeholder.update(label="⚠️ 拟合EVT模型...")
+    try:
+        evt = EVTRiskAnalyzer(returns, threshold_percentile=evt_threshold, confidence=var_confidence)
+        evt.fit_gpd()
+        var = evt.calculate_var()
+        es = evt.calculate_es()
+        st.session_state.evt = evt
+        st.session_state.var = var
+        st.session_state.es = es
+    except Exception as e:
+        st.session_state.evt = None
+        st.session_state.var = returns.quantile(var_confidence)
+        st.session_state.es = returns.quantile(0.999)
 
     st.session_state.analysis_done = True
+
+    if need_load:
+        load_placeholder.update(label="✅ 分析完成!", state="complete")
+        st.balloons()
 
 # ============================================================================
 # 分析结果展示
