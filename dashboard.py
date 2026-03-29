@@ -306,25 +306,25 @@ if st.session_state.analysis_done:
     spread_std = clean_data['spread'].std()
 
     # =========================================================================
-    # 首页仪表板
+    # 首页仪表板 - 关键指标卡片
     # =========================================================================
     section_header("📈 关键指标概览", "📊")
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
+        current_vol = winner_vol.iloc[-1] if winner_vol is not None else None
         safe_metric("当前利差", current_spread, "", "最新交易日利差值")
     with col2:
         safe_metric("历史均值", spread_mean, "", "全样本平均")
     with col3:
-        current_vol = winner_vol.iloc[-1] if winner_vol is not None else None
         safe_metric("当前波动率", current_vol, "", f"{winner}模型")
     with col4:
         safe_metric(f"{var_confidence*100:.0f}% VaR", var, "", "单日最大风险")
 
-    # 风险预警面板
+    # =========================================================================
+    # 风险预警面板 - 紧凑显示
+    # =========================================================================
     st.divider()
-    section_header("⚠️ 风险预警", "🔔")
-
     alerts = check_risk_alerts(clean_data, returns, evt, vol_modeler)
     risk_score = get_risk_score(alerts)
 
@@ -332,12 +332,14 @@ if st.session_state.analysis_done:
     with col1:
         st.plotly_chart(plot_risk_gauge(risk_score, theme), use_container_width=True)
     with col2:
-        st.plotly_chart(plot_risk_summary(alerts, theme), use_container_width=True)
+        # 简洁的预警摘要
+        st.markdown(f"**{risk_score['level']}** | 评分: {risk_score['score']:.1f}")
+        st.markdown(f"🔴 危险: {risk_score['danger_count']} | 🟡 警告: {risk_score['warning_count']} | 🟢 正常: {risk_score['total_alerts'] - risk_score['danger_count'] - risk_score['warning_count']}")
 
-    # 预警详情
-    with st.expander("📋 预警详情", expanded=True):
+    # 预警详情（可折叠）
+    with st.expander("📋 查看预警详情"):
         for alert in alerts:
-            alert_box(alert['message'], alert['level'])
+            st.markdown(f"- {alert['message']}")
 
     # =========================================================================
     # Tabs 导航
@@ -395,6 +397,14 @@ if st.session_state.analysis_done:
         else:
             alert_box("数据平稳，无明显交易信号", "info")
 
+        # 信号历史分布
+        st.markdown("#### 岭偏离度历史分布")
+        hist_data = pd.DataFrame({
+            '日期': deviation.index,
+            '偏离度': deviation.values
+        })
+        st.line_chart(hist_data.set_index('日期')['偏离度'])
+
     # =========================================================================
     # Tab 2: 波动率分析
     # =========================================================================
@@ -447,6 +457,18 @@ if st.session_state.analysis_done:
         except Exception as e:
             st.warning(f"状态检测不可用: {str(e)}")
 
+        # 模型对比
+        st.markdown("#### 模型对比 (AIC/BIC)")
+        model_comparison = []
+        for model_name in vol_modeler.models.keys():
+            model_comparison.append({
+                '模型': model_name,
+                'AIC': f"{vol_modeler.ic_scores[model_name]['AIC']:.2f}",
+                'BIC': f"{vol_modeler.ic_scores[model_name]['BIC']:.2f}",
+                '获胜': '✓' if model_name == winner else ''
+            })
+        st.dataframe(pd.DataFrame(model_comparison), use_container_width=True, hide_index=True)
+
     # =========================================================================
     # Tab 3: 风险分析
     # =========================================================================
@@ -477,6 +499,22 @@ if st.session_state.analysis_done:
         st.markdown("#### VaR 对比分析")
         print_var_comparison(evt_var_out, empirical_var)
 
+        # GPD参数
+        if evt and evt.gpd_params:
+            st.markdown("#### GPD 参数估计")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.write(f"**形状参数 ξ**: {evt.gpd_params['shape']:.4f}")
+            with col2:
+                st.write(f"**尺度参数 σ**: {evt.gpd_params['scale']:.4f}")
+
+            if evt.gpd_params['shape'] > 0:
+                st.info("ξ > 0 表示厚尾分布（Fat Tail），极端损失风险较高")
+            elif evt.gpd_params['shape'] < 0:
+                st.info("ξ < 0 表示薄尾分布，极端损失风险较低")
+            else:
+                st.info("ξ ≈ 0 表示指数尾分布，类似于Gumbel分布")
+
     # =========================================================================
     # Tab 4: 情景分析
     # =========================================================================
@@ -488,19 +526,16 @@ if st.session_state.analysis_done:
             st.markdown("#### 📉 压力测试")
             col1, col2 = st.columns([1, 2])
             with col1:
-                shock = st.slider("利差冲击", -100, 100, 10, 5, key="stress_shock")
+                shock = st.slider("利差冲击 (bps)", -100, 100, 10, 5, key="stress_shock")
                 stress_results = run_stress_test(returns, shock)
+                st.metric("冲击后VaR", f"{stress_results['var']:.4f}")
+                st.metric("冲击后ES", f"{stress_results['es']:.4f}")
+                st.metric("VaR变化", f"{stress_results['var_change']:.4f}")
             with col2:
-                st.metric("压力VaR", f"{stress_results['var']:.4f}")
-                st.metric("压力ES", f"{stress_results['es']:.4f}")
-                st.metric("最大损失", f"{stress_results['max_loss']:.4f}")
-
-        # 多情景压力测试
-        with st.container(border=True):
-            st.markdown("#### 📊 多情景压力测试")
-            multi_stress = run_multi_scenario_stress(returns)
-            stress_df = pd.DataFrame(multi_stress)
-            st.line_chart(stress_df.set_index('shock')[['var', 'es']])
+                # 多情景压力测试
+                multi_stress = run_multi_scenario_stress(returns)
+                stress_df = pd.DataFrame(multi_stress)
+                st.line_chart(stress_df.set_index('shock')[['var', 'es']], use_container_width=True)
 
         # 蒙特卡洛模拟
         with st.container(border=True):
@@ -509,19 +544,30 @@ if st.session_state.analysis_done:
             with col1:
                 n_sim = st.number_input("模拟次数", 1000, 100000, 10000, 1000, key="mc_nsim")
                 horizon = st.number_input("预测天数", 1, 252, 10, key="mc_horizon")
-                if st.button("运行模拟", key="run_mc"):
-                    st.session_state['mc_results'] = run_monte_carlo(returns, n_sim, horizon)
+                if st.button("运行模拟", key="run_mc", type="primary"):
+                    with st.spinner("运行蒙特卡洛模拟..."):
+                        st.session_state['mc_results'] = run_monte_carlo(returns, n_sim, horizon)
             with col2:
                 if 'mc_results' in st.session_state:
-                    st.plotly_chart(plot_mc_simulation(st.session_state['mc_results'], theme), use_container_width=True)
+                    mc = st.session_state['mc_results']
+                    col_a, col_b = st.columns(2)
+                    with col_a:
+                        st.metric("模拟均值", f"{mc['mean']:.4f}")
+                        st.metric("模拟标准差", f"{mc['std']:.4f}")
+                        st.metric("99% VaR", f"{mc['var_99']:.4f}")
+                    with col_b:
+                        st.metric("99% ES", f"{mc['es_99']:.4f}")
+                        st.metric("最小值", f"{mc['min']:.4f}")
+                        st.metric("最大值", f"{mc['max']:.4f}")
+                    st.plotly_chart(plot_mc_simulation(mc, theme), use_container_width=True)
 
         # 敏感性分析
         with st.container(border=True):
             st.markdown("#### 📈 敏感性分析")
-            param = st.selectbox("参数", ["volatility", "mean", "df"], format_func=lambda x: {
+            param = st.selectbox("分析参数", ["volatility", "mean", "df"], format_func=lambda x: {
                 'volatility': '波动率',
                 'mean': '均值',
-                'df': '自由度'
+                'df': '自由度（尾部厚度）'
             }.get(x, x), key="sens_param")
             sens_results = run_sensitivity_analysis(returns, param)
             st.plotly_chart(plot_sensitivity_analysis(sens_results, param, theme), use_container_width=True)
@@ -567,12 +613,13 @@ if st.session_state.analysis_done:
                 deviation_threshold = st.slider("偏离度预警阈值", 1.0, 3.0, 1.5, 0.1, key="alert_dev")
 
             # 重新检查预警
-            if st.button("应用阈值", key="apply_thresholds"):
+            if st.button("应用阈值", key="apply_thresholds", type="primary"):
                 alerts = check_risk_alerts(
                     clean_data, returns, evt, vol_modeler,
                     var_threshold, vol_percentile, deviation_threshold
                 )
                 st.session_state['custom_alerts'] = alerts
+                st.success("阈值已应用")
 
         # 当前预警状态
         st.markdown("#### 📊 当前预警状态")
@@ -642,7 +689,8 @@ if st.session_state.analysis_done:
                     "📥 下载报告",
                     f,
                     file_name=os.path.basename(st.session_state['last_report']),
-                    key="download_report"
+                    key="download_report",
+                    type="primary"
                 )
 
         # 历史报告
