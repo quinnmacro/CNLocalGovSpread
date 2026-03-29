@@ -85,6 +85,11 @@ class KalmanSignalExtractor:
 
         deviation = self.spread - self.smoothed_state
         std = deviation.std()
+
+        # 添加保护，防止除以接近零的标准差
+        if std < 1e-6:
+            std = 1e-6
+
         normalized_deviation = deviation / std
 
         return normalized_deviation

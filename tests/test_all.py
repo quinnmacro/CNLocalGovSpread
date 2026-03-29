@@ -82,6 +82,42 @@ class TestDataEngine:
         with pytest.raises(ValueError):
             engine.clean_data()
 
+    def test_csv_data_source(self):
+        """测试 CSV 数据源"""
+        csv_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'local_gov_spread.csv')
+        if not os.path.exists(csv_path):
+            pytest.skip("CSV 数据文件不存在")
+
+        config = {
+            'SOURCE': 'CSV',
+            'CSV_PATH': csv_path,
+            'SPREAD_COLUMN': 'spread_all',
+            'START_DATE': '2018-01-01',
+            'END_DATE': '2026-03-29'
+        }
+        engine = DataEngine(config)
+        data = engine.load_data()
+        assert isinstance(data, pd.DataFrame)
+        assert 'spread' in data.columns
+        assert len(data) > 1000  # 至少有1000条数据
+
+    def test_csv_multi_tenor_columns(self):
+        """测试 CSV 多期限列选择"""
+        csv_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'local_gov_spread.csv')
+        if not os.path.exists(csv_path):
+            pytest.skip("CSV 数据文件不存在")
+
+        # 测试各期限列
+        for col in ['spread_all', 'spread_5y', 'spread_10y', 'spread_30y']:
+            config = {
+                'SOURCE': 'CSV',
+                'CSV_PATH': csv_path,
+                'SPREAD_COLUMN': col
+            }
+            engine = DataEngine(config)
+            data = engine.load_data()
+            assert 'spread' in data.columns, f"列 {col} 加载失败"
+
 
 # ============================================================================
 # VolatilityModeler 测试

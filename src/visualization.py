@@ -209,3 +209,295 @@ def print_var_comparison(evt_var, empirical_var):
         print(f"  ⚠️  EVT 估计的风险更高（更保守），这是肥尾效应的体现")
     else:
         print(f"  ℹ️  EVT 与经验分位数接近，尾部风险可控")
+
+
+def plot_multi_tenor_spread(df, columns=None):
+    """
+    图表: 多期限利差对比
+
+    参数:
+        df: DataFrame，包含多期限利差数据
+        columns: 列名列表，默认为 ['spread_all', 'spread_5y', 'spread_10y', 'spread_30y']
+
+    返回:
+        plotly Figure 对象
+    """
+    if columns is None:
+        columns = ['spread_all', 'spread_5y', 'spread_10y', 'spread_30y']
+
+    # 过滤存在的列
+    available_cols = [c for c in columns if c in df.columns]
+    if not available_cols:
+        raise ValueError("没有可用的利差列")
+
+    # 列名映射
+    col_names = {
+        'spread_all': '综合利差',
+        'spread_5y': '5年期',
+        'spread_10y': '10年期',
+        'spread_30y': '30年期'
+    }
+
+    # 颜色映射
+    colors = {
+        'spread_all': '#1f77b4',  # 蓝色
+        'spread_5y': '#2ca02c',   # 绿色
+        'spread_10y': '#ff7f0e',  # 橙色
+        'spread_30y': '#d62728'   # 红色
+    }
+
+    fig = go.Figure()
+
+    for col in available_cols:
+        fig.add_trace(go.Scatter(
+            x=df.index,
+            y=df[col],
+            mode='lines',
+            name=col_names.get(col, col),
+            line=dict(color=colors.get(col, 'gray'), width=1.5)
+        ))
+
+    fig.update_layout(
+        title='多期限利差对比分析',
+        xaxis_title='日期',
+        yaxis_title='利差 (bps)',
+        hovermode='x unified',
+        template='plotly_white',
+        height=500,
+        legend=dict(
+            orientation='h',
+            yanchor='bottom',
+            y=1.02,
+            xanchor='right',
+            x=1
+        )
+    )
+
+    return fig
+
+
+def plot_tenor_spread_correlation(df, columns=None):
+    """
+    图表: 期限利差相关性热力图
+
+    参数:
+        df: DataFrame，包含多期限利差数据
+        columns: 列名列表
+
+    返回:
+        plotly Figure 对象
+    """
+    if columns is None:
+        columns = ['spread_all', 'spread_5y', 'spread_10y', 'spread_30y']
+
+    available_cols = [c for c in columns if c in df.columns]
+    if len(available_cols) < 2:
+        raise ValueError("至少需要2列数据才能计算相关性")
+
+    # 列名映射
+    col_names = {
+        'spread_all': '综合',
+        'spread_5y': '5Y',
+        'spread_10y': '10Y',
+        'spread_30y': '30Y'
+    }
+
+    # 计算相关性矩阵
+    corr_matrix = df[available_cols].corr()
+
+    # 转换为显示名称
+    display_names = [col_names.get(c, c) for c in available_cols]
+
+    fig = go.Figure(data=go.Heatmap(
+        z=corr_matrix.values,
+        x=display_names,
+        y=display_names,
+        colorscale='RdBu',
+        zmid=0,
+        text=[[f'{v:.2f}' for v in row] for row in corr_matrix.values],
+        texttemplate='%{text}',
+        textfont={'size': 14},
+        hoverongaps=False
+    ))
+
+    fig.update_layout(
+        title='期限利差相关性矩阵',
+        template='plotly_white',
+        height=400,
+        width=500
+    )
+
+    return fig
+
+
+def plot_tenor_spread_statistics(df, columns=None):
+    """
+    图表: 期限利差统计对比（箱线图）
+
+    参数:
+        df: DataFrame，包含多期限利差数据
+        columns: 列名列表
+
+    返回:
+        plotly Figure 对象
+    """
+    if columns is None:
+        columns = ['spread_all', 'spread_5y', 'spread_10y', 'spread_30y']
+
+    available_cols = [c for c in columns if c in df.columns]
+
+    # 列名映射
+    col_names = {
+        'spread_all': '综合',
+        'spread_5y': '5Y',
+        'spread_10y': '10Y',
+        'spread_30y': '30Y'
+    }
+
+    fig = go.Figure()
+
+    for col in available_cols:
+        fig.add_trace(go.Box(
+            y=df[col].dropna(),
+            name=col_names.get(col, col),
+            boxmean='sd'
+        ))
+
+    fig.update_layout(
+        title='期限利差统计分布',
+        yaxis_title='利差 (bps)',
+        template='plotly_white',
+        height=400,
+        showlegend=False
+    )
+
+    return fig
+
+
+def plot_credit_spread_comparison(local_gov_df, credit_df=None, credit_columns=None):
+    """
+    图表: 信用利差对比分析
+
+    参数:
+        local_gov_df: DataFrame，地方债利差数据
+        credit_df: DataFrame，信用利差数据（可选）
+        credit_columns: 信用利差列名列表
+
+    返回:
+        plotly Figure 对象
+    """
+    fig = go.Figure()
+
+    # 添加地方债综合利差作为基准
+    if 'spread_all' in local_gov_df.columns:
+        fig.add_trace(go.Scatter(
+            x=local_gov_df.index,
+            y=local_gov_df['spread_all'],
+            mode='lines',
+            name='地方债 (基准)',
+            line=dict(color='#1f77b4', width=2)
+        ))
+
+    # 如果有信用利差数据，添加对比
+    if credit_df is not None and credit_columns:
+        colors = ['#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+        for i, col in enumerate(credit_columns):
+            if col in credit_df.columns:
+                fig.add_trace(go.Scatter(
+                    x=credit_df.index,
+                    y=credit_df[col],
+                    mode='lines',
+                    name=col.replace('credit_', '').replace('_', ' ').title(),
+                    line=dict(color=colors[i % len(colors)], width=1.5, dash='dot')
+                ))
+
+    fig.update_layout(
+        title='信用利差对比分析',
+        xaxis_title='日期',
+        yaxis_title='利差 (bps)',
+        hovermode='x unified',
+        template='plotly_white',
+        height=500,
+        legend=dict(
+            orientation='h',
+            yanchor='bottom',
+            y=1.02,
+            xanchor='right',
+            x=1
+        )
+    )
+
+    return fig
+
+
+def plot_spread_premium_analysis(local_gov_df, credit_df=None, credit_column='credit_corp_aaa'):
+    """
+    图表: 信用利差溢价分析
+
+    分析信用利差相对于地方债利差的溢价
+
+    参数:
+        local_gov_df: DataFrame，地方债利差数据
+        credit_df: DataFrame，信用利差数据
+        credit_column: 信用利差列名
+
+    返回:
+        plotly Figure 对象
+    """
+    if credit_df is None or credit_column not in credit_df.columns:
+        # 如果没有信用利差数据，返回占位图
+        fig = go.Figure()
+        fig.add_annotation(
+            text="信用利差数据未配置<br>请在 scripts/download_data.py 中添加 Wind EDB 指标",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5,
+            showarrow=False,
+            font=dict(size=16)
+        )
+        fig.update_layout(
+            title='信用利差溢价分析',
+            template='plotly_white',
+            height=400
+        )
+        return fig
+
+    # 合并数据计算溢价
+    merged = pd.DataFrame({
+        'local_gov': local_gov_df['spread_all'],
+        'credit': credit_df[credit_column]
+    }).dropna()
+
+    merged['premium'] = merged['credit'] - merged['local_gov']
+
+    fig = go.Figure()
+
+    # 信用溢价面积图
+    fig.add_trace(go.Scatter(
+        x=merged.index,
+        y=merged['premium'],
+        mode='lines',
+        name='信用溢价',
+        fill='tozeroy',
+        fillcolor='rgba(255, 127, 14, 0.3)',
+        line=dict(color='#ff7f0e', width=2)
+    ))
+
+    # 溢价均值线
+    avg_premium = merged['premium'].mean()
+    fig.add_hline(
+        y=avg_premium,
+        line_dash='dash',
+        line_color='red',
+        annotation_text=f'平均溢价: {avg_premium:.2f} bps'
+    )
+
+    fig.update_layout(
+        title='信用利差溢价分析 (企业债 - 地方债)',
+        xaxis_title='日期',
+        yaxis_title='信用溢价 (bps)',
+        hovermode='x unified',
+        template='plotly_white',
+        height=400
+    )
+
+    return fig

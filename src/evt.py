@@ -90,11 +90,17 @@ class EVTRiskAnalyzer:
         if self.gpd_params is None:
             # Fallback: 使用经验分位数
             self.var = self.returns.quantile(self.confidence)
-            print(f"\n使用经验分位数: {self.confidence*100}% VaR = {self.var:.2f} bps")
+            print(f"\n使用经验分位数: {self.confidence*100}% VaR = {self.var:.4f}")
             return self.var
 
         shape = self.gpd_params['shape']
         scale = self.gpd_params['scale']
+
+        # 形状参数合理性检查
+        if abs(shape) > 1.0:
+            print(f"⚠️ 形状参数过大 (ξ={shape:.4f})，使用经验分位数")
+            self.var = self.returns.quantile(self.confidence)
+            return self.var
 
         # 超过阈值的概率
         p_exceed = 1 - self.threshold_percentile
@@ -103,13 +109,32 @@ class EVTRiskAnalyzer:
         if abs(shape) < 1e-6:  # shape ≈ 0 时，用指数分布公式
             self.var = self.threshold + scale * np.log((1 - self.confidence) / p_exceed)
         else:
-            self.var = self.threshold + (scale / shape) * (
-                ((1 - self.confidence) / p_exceed) ** (-shape) - 1
-            )
+            # 安全计算，防止溢出
+            exponent_term = ((1 - self.confidence) / p_exceed) ** (-shape)
+
+            # 检查指数项是否溢出
+            if np.isinf(exponent_term) or np.isnan(exponent_term) or exponent_term > 1e10:
+                print(f"⚠️ EVT计算溢出，使用经验分位数")
+                self.var = self.returns.quantile(self.confidence)
+                return self.var
+
+            var_estimate = self.threshold + (scale / shape) * (exponent_term - 1)
+
+            # VaR 上限保护：不应超过数据范围的 10 倍
+            max_reasonable_var = self.returns.max() * 10
+            min_reasonable_var = self.returns.min()
+
+            if var_estimate > max_reasonable_var:
+                print(f"⚠️ VaR估计值异常大 ({var_estimate:.4f})，使用上限值")
+                self.var = max_reasonable_var
+            elif var_estimate < min_reasonable_var:
+                self.var = min_reasonable_var
+            else:
+                self.var = var_estimate
 
         print(f"\n" + "="*60)
         print(f"🎯 EVT-VaR ({self.confidence*100}% 置信水平)")
-        print(f"   最大日损失预期: {self.var:.2f} bps")
+        print(f"   最大日损失预期: {self.var:.4f}")
         print(f"   解读: 在 100 个交易日中，最坏的那一天利差扩大不超过此值")
         print("="*60)
 
@@ -141,6 +166,14 @@ class EVTRiskAnalyzer:
         print("计算 Expected Shortfall (CVaR)")
         print("="*60)
 
+        # VaR 合理性检查
+        if np.isinf(self.var) or np.isnan(self.var):
+            print(f"⚠️ VaR 无效，使用经验方法计算 ES")
+            exceed_var = self.returns[self.returns > self.returns.quantile(0.99)]
+            self.es = exceed_var.mean() if len(exceed_var) > 0 else self.returns.max()
+            print(f"经验 ES = {self.es:.4f}")
+            return self.es
+
         if self.gpd_params is None:
             # 经验 ES: 超过 VaR 的值的平均
             exceed_var = self.returns[self.returns > self.var]
@@ -149,26 +182,38 @@ class EVTRiskAnalyzer:
             else:
                 self.es = self.var  # fallback
 
-            print(f"使用经验方法: {self.confidence*100}% ES = {self.es:.2f} bps")
+            print(f"使用经验方法: {self.confidence*100}% ES = {self.es:.4f}")
             return self.es
 
         shape = self.gpd_params['shape']
         scale = self.gpd_params['scale']
 
         if shape >= 1:
-            # ES 不存在
-            print(f"⚠️  ξ = {shape:.4f} >= 1, Expected Shortfall 不存在")
-            self.es = np.inf
+            # ES 不存在，使用经验方法
+            print(f"⚠️ ξ = {shape:.4f} >= 1, Expected Shortfall 理论值不存在")
+            exceed_var = self.returns[self.returns > self.var]
+            self.es = exceed_var.mean() if len(exceed_var) > 0 else self.var * 1.2
+            print(f"使用经验方法: ES = {self.es:.4f}")
             return self.es
 
         # GPD-based ES 公式
-        self.es = self.var + (scale + shape * (self.var - self.threshold)) / (1 - shape)
+        es_estimate = self.var + (scale + shape * (self.var - self.threshold)) / (1 - shape)
+
+        # ES 合理性检查：ES 应该 >= VaR
+        if np.isinf(es_estimate) or np.isnan(es_estimate):
+            print(f"⚠️ ES 计算溢出，使用经验方法")
+            exceed_var = self.returns[self.returns > self.var]
+            self.es = exceed_var.mean() if len(exceed_var) > 0 else self.var * 1.2
+        else:
+            # ES 必须 >= VaR
+            self.es = max(es_estimate, self.var)
 
         print(f"🎯 Expected Shortfall ({self.confidence*100}% 置信水平)")
-        print(f"   ES = {self.es:.2f} bps")
-        print(f"   VaR = {self.var:.2f} bps")
-        print(f"   ES/VaR 比率 = {self.es/self.var:.2%}")
-        print(f"   解读: 在最坏的1%交易日中,平均损失为 {self.es:.2f} bps")
+        print(f"   ES = {self.es:.4f}")
+        print(f"   VaR = {self.var:.4f}")
+        if self.var > 0:
+            print(f"   ES/VaR 比率 = {self.es/self.var:.2%}")
+        print(f"   解读: 在最坏的1%交易日中,平均损失为 {self.es:.4f}")
         print("="*60)
 
         return self.es

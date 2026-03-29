@@ -22,7 +22,12 @@ from .visualization import (
     plot_signal_trend,
     plot_volatility_structure,
     plot_tail_risk,
-    print_var_comparison
+    print_var_comparison,
+    plot_multi_tenor_spread,
+    plot_tenor_spread_correlation,
+    plot_tenor_spread_statistics,
+    plot_credit_spread_comparison,
+    plot_spread_premium_analysis
 )
 from .report import generate_strategic_report
 from .export import export_to_excel
@@ -40,6 +45,11 @@ __all__ = [
     'plot_volatility_structure',
     'plot_tail_risk',
     'print_var_comparison',
+    'plot_multi_tenor_spread',
+    'plot_tenor_spread_correlation',
+    'plot_tenor_spread_statistics',
+    'plot_credit_spread_comparison',
+    'plot_spread_premium_analysis',
     'generate_strategic_report',
     'export_to_excel'
 ]

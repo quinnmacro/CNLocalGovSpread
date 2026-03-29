@@ -110,11 +110,17 @@ class VolatilityModeler:
 
         # 初始化方差序列
         variance = np.zeros(n)
-        variance[0] = returns[0] ** 2
+        # 使用前5个收益率的方差作为初始值，更稳定
+        variance[0] = np.var(returns[:min(5, n)]) if n >= 5 else returns[0] ** 2
+
+        # 添加方差下限，防止数值下溢
+        min_variance = 1e-10
 
         # EWMA 递推
         for t in range(1, n):
             variance[t] = lambda_param * variance[t-1] + (1 - lambda_param) * returns[t-1] ** 2
+            # 防止方差过小
+            variance[t] = max(variance[t], min_variance)
 
         volatility = np.sqrt(variance)
 
@@ -122,21 +128,37 @@ class VolatilityModeler:
         ewma_volatility = pd.Series(volatility, index=self.returns.index)
 
         # 计算对数似然 (假设正态分布)
-        # 避免 log(0) 的问题
-        valid_idx = variance[1:] > 0
-        log_likelihood = -0.5 * np.sum(
-            np.log(variance[1:][valid_idx]) + returns[1:][valid_idx]**2 / variance[1:][valid_idx]
-        )
+        # 避免 log(0) 和数值溢出
+        valid_idx = variance[1:] > min_variance
+        valid_count = np.sum(valid_idx)
 
-        # AIC: 只有一个参数 lambda
-        aic = 2 * 1 - 2 * log_likelihood
-        bic = aic  # 单参数模型
+        if valid_count < 10:
+            # 样本太少，使用简化方法
+            log_likelihood = -1e6  # 惩罚值
+            aic = 2 * 1 - 2 * log_likelihood
+            bic = aic
+        else:
+            # 安全计算对数似然
+            log_terms = np.log(variance[1:][valid_idx])
+            ratio_terms = returns[1:][valid_idx]**2 / variance[1:][valid_idx]
+
+            # 检查是否有异常值
+            if np.any(np.isnan(log_terms)) or np.any(np.isinf(log_terms)):
+                log_likelihood = -1e6
+            elif np.any(np.isnan(ratio_terms)) or np.any(np.isinf(ratio_terms)):
+                log_likelihood = -1e6
+            else:
+                log_likelihood = -0.5 * np.sum(log_terms + ratio_terms)
+
+            aic = 2 * 1 - 2 * log_likelihood
+            bic = aic  # 单参数模型
 
         self.models['EWMA'] = {'volatility': ewma_volatility, 'lambda': lambda_param}
         self.ic_scores['EWMA'] = {'AIC': aic, 'BIC': bic}
 
         print(f"   λ = {lambda_param} (RiskMetrics 标准)")
         print(f"   AIC={aic:.2f}, BIC={bic:.2f}")
+        print(f"   当前波动率: {volatility[-1]:.4f}")
 
         return ewma_volatility
 
