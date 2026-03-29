@@ -110,8 +110,14 @@ class VolatilityModeler:
 
         # 初始化方差序列
         variance = np.zeros(n)
-        # 使用前5个收益率的方差作为初始值，更稳定
-        variance[0] = np.var(returns[:min(5, n)]) if n >= 5 else returns[0] ** 2
+
+        # P0修复: 检查数据长度，避免空数组索引错误
+        if n < 5:
+            # 样本太少，使用第一个收益率的平方作为初始方差
+            variance[0] = returns[0] ** 2 if n > 0 else 1e-4
+        else:
+            # 使用前5个收益率的方差作为初始值，更稳定
+            variance[0] = np.var(returns[:5])
 
         # 添加方差下限，防止数值下溢
         min_variance = 1e-10
@@ -230,22 +236,33 @@ class RegimeDetector:
         - regime_labels: 每个时点的状态标签 (0, 1, 2)
         - regime_stats: 每个状态的统计特征
         """
-        from hmmlearn import hmm
+        try:
+            from hmmlearn import hmm
+        except ImportError:
+            print("⚠️ hmmlearn 未安装，跳过状态检测")
+            self.regime_labels = np.zeros(len(self.volatility), dtype=int)
+            self.regime_stats = {0: {'mean': self.volatility.mean(), 'std': self.volatility.std(), 'count': len(self.volatility), 'pct': 100.0}}
+            return self.regime_labels
 
         # 准备数据
         X = self.volatility.values.reshape(-1, 1)
 
-        # 拟合高斯HMM
-        self.model = hmm.GaussianHMM(
-            n_components=self.n_regimes,
-            covariance_type='full',
-            n_iter=100,
-            random_state=42
-        )
-        self.model.fit(X)
+        # P0修复: 添加异常处理
+        try:
+            # 拟合高斯HMM
+            self.model = hmm.GaussianHMM(
+                n_components=self.n_regimes,
+                covariance_type='full',
+                n_iter=100,
+                random_state=42
+            )
+            self.model.fit(X)
 
-        # 预测状态
-        self.regime_labels = self.model.predict(X)
+            # 预测状态
+            self.regime_labels = self.model.predict(X)
+        except Exception as e:
+            print(f"⚠️ HMM拟合失败: {str(e)}，使用默认状态")
+            self.regime_labels = np.zeros(len(self.volatility), dtype=int)
 
         # 计算每个状态的统计特征
         self.regime_stats = {}

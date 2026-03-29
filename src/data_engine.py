@@ -164,7 +164,13 @@ class DataEngine:
         # 答：它是让 MAD 在正态分布下等价于标准差的调整因子
         # 但我们的数据不是正态分布（有肥尾），所以这只是个近似
         threshold = self.config.get('MAD_THRESHOLD', 5.0)
-        modified_z_score = 0.6745 * (df['spread'] - median) / mad
+
+        # P0修复: 检查 MAD 是否为零，避免除零错误
+        if mad == 0:
+            print("⚠️  MAD = 0，数据无明显离散，跳过异常值检测")
+            modified_z_score = pd.Series(0, index=df.index)
+        else:
+            modified_z_score = 0.6745 * (df['spread'] - median) / mad
 
         outliers = np.abs(modified_z_score) > threshold
         if outliers.sum() > 0:

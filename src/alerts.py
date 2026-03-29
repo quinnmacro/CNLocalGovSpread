@@ -107,7 +107,8 @@ def check_risk_alerts(clean_data, returns, evt, vol_modeler,
                     'threshold': vol_threshold_value,
                     'timestamp': datetime.now()
                 })
-        except:
+        except Exception as e:
+            print(f"波动率预警计算失败: {str(e)}")
             pass
 
     # 3. 利差异常预警
@@ -139,7 +140,8 @@ def check_risk_alerts(clean_data, returns, evt, vol_modeler,
         })
 
     # 4. 趋势预警
-    if len(spread) >= 20:
+    # P0修复: 检查数据长度是否足够计算60日趋势
+    if len(spread) >= 60:
         recent_trend = spread.iloc[-20:].mean() - spread.iloc[-60:-20].mean()
         if recent_trend > spread_std * 0.5:
             alerts.append({

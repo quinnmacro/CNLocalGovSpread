@@ -46,6 +46,12 @@ class EVTRiskAnalyzer:
         # 提取超过阈值的极值（exceedances）
         exceedances = self.returns[self.returns > self.threshold] - self.threshold
 
+        # P0修复: 检查 exceedances 是否为空
+        if len(exceedances) == 0:
+            print(f"⚠️  警告: 没有数据超过阈值 {self.threshold:.2f}，无法拟合 GPD")
+            self.gpd_params = None
+            return
+
         if len(exceedances) < 10:
             print(f"⚠️  警告: 超过阈值的样本太少 ({len(exceedances)} 个)，EVT 估计可能不稳定")
 
@@ -251,13 +257,38 @@ class EVTRiskAnalyzer:
         threshold = sorted_returns[k]
         exceedances = sorted_returns[:k]
 
+        # P0修复: 检查 exceedances 和 threshold 是否有效
+        if k == 0 or threshold == 0:
+            print(f"⚠️  警告: 无法计算 Hill 估计量 (k={k}, threshold={threshold:.2f})")
+            self.hill_estimator = {
+                'tail_index': np.inf,
+                'shape': np.inf,
+                'threshold': threshold,
+                'k': k
+            }
+            return np.inf
+
         # ξ_Hill = 1/k * Σ[log(X_i / threshold)]
-        log_sum = np.sum(np.log(exceedances / threshold))
-        hill_xi = log_sum / k
+        # P0修复: 添加安全检查，防止 log(0) 或除零
+        safe_exceedances = exceedances[exceedances > 0]
+        if len(safe_exceedances) == 0:
+            print(f"⚠️  警告: 没有有效的正极值样本")
+            self.hill_estimator = {
+                'tail_index': np.inf,
+                'shape': np.inf,
+                'threshold': threshold,
+                'k': k
+            }
+            return np.inf
+
+        log_sum = np.sum(np.log(safe_exceedances / threshold))
+        hill_xi = log_sum / k if k > 0 else np.inf
 
         # 尾部指数 = 1/ξ
         if hill_xi > 0:
             hill_tail_index = 1 / hill_xi
+        elif hill_xi < 0:
+            hill_tail_index = 1 / abs(hill_xi)  # 使用绝对值避免负数
         else:
             hill_tail_index = np.inf
 

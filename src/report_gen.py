@@ -211,12 +211,31 @@ class ReportGenerator:
             from reportlab.pdfbase import pdfmetrics
             from reportlab.pdfbase.ttfonts import TTFont
 
-            # 注册中文字体（如果有的话）
-            try:
-                pdfmetrics.registerFont(TTFont('SimHei', '/System/Library/Fonts/PingFang.ttc', subfontIndex=1))
-                chinese_font = 'SimHei'
-            except:
-                chinese_font = 'Helvetica'
+            # 注册中文字体（跨平台支持）
+            # P0修复: 移除硬编码macOS路径，使用跨平台方案
+            chinese_font = 'Helvetica'  # 默认英文字体
+
+            font_paths = [
+                # macOS
+                '/System/Library/Fonts/PingFang.ttc',
+                '/System/Library/Fonts/STHeiti Light.ttc',
+                '/Library/Fonts/Arial Unicode.ttf',
+                # Windows
+                'C:/Windows/Fonts/simhei.ttf',
+                'C:/Windows/Fonts/msyh.ttc',
+                # Linux
+                '/usr/share/fonts/truetype/wqy/wqy-microhei.ttc',
+                '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+            ]
+
+            for font_path in font_paths:
+                try:
+                    if os.path.exists(font_path):
+                        pdfmetrics.registerFont(TTFont('SimHei', font_path))
+                        chinese_font = 'SimHei'
+                        break
+                except Exception:
+                    continue
 
             filename = os.path.join(self.output_dir, f"report_{timestamp}.pdf")
             doc = SimpleDocTemplate(filename, pagesize=A4)
