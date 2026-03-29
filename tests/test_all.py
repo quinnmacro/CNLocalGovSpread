@@ -231,6 +231,59 @@ class TestEVTRiskAnalyzer:
         assert es is not None
         assert es >= analyzer.var  # ES 必须 >= VaR
 
+    def test_estimate_hill(self, sample_returns):
+        """测试 Hill 估计量"""
+        analyzer = EVTRiskAnalyzer(sample_returns)
+        hill_index = analyzer.estimate_hill()
+        assert hill_index is not None
+        assert hill_index > 0
+        assert analyzer.hill_estimator is not None
+
+
+# ============================================================================
+# RegimeDetector 测试
+# ============================================================================
+
+class TestRegimeDetector:
+    """RegimeDetector 类测试"""
+
+    @pytest.fixture
+    def sample_volatility(self):
+        """生成测试用波动率数据"""
+        np.random.seed(42)
+        dates = pd.date_range('2020-01-01', periods=500, freq='B')
+        # 模拟三种波动率状态
+        vol = np.concatenate([
+            np.random.randn(200) * 2 + 5,   # 低波动
+            np.random.randn(150) * 4 + 15,  # 中波动
+            np.random.randn(150) * 6 + 25   # 高波动
+        ])
+        return pd.Series(vol, index=dates)
+
+    def test_fit_returns_labels(self, sample_volatility):
+        """测试 fit 返回状态标签"""
+        detector = RegimeDetector(sample_volatility, n_regimes=3)
+        labels = detector.fit()
+        assert len(labels) == len(sample_volatility)
+        assert set(labels).issubset({0, 1, 2})
+
+    def test_get_current_regime(self, sample_volatility):
+        """测试获取当前状态"""
+        detector = RegimeDetector(sample_volatility, n_regimes=3)
+        detector.fit()
+        current = detector.get_current_regime()
+        assert current in [0, 1, 2]
+
+    def test_regime_stats(self, sample_volatility):
+        """测试状态统计"""
+        detector = RegimeDetector(sample_volatility, n_regimes=3)
+        detector.fit()
+        assert detector.regime_stats is not None
+        for i in range(3):
+            assert 'mean' in detector.regime_stats[i]
+            assert 'std' in detector.regime_stats[i]
+            assert 'pct' in detector.regime_stats[i]
+
 
 # ============================================================================
 # 集成测试
