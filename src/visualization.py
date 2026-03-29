@@ -48,23 +48,23 @@ def add_range_selector(fig, dark_mode=False):
 
 
 def get_theme_config(theme='light'):
-    """获取主题配置"""
+    """获取主题配置 - 透明背景"""
     if theme == 'dark':
         return {
             'template': 'plotly_dark',
             'paper_bgcolor': 'rgba(0,0,0,0)',
             'plot_bgcolor': 'rgba(0,0,0,0)',
-            'font_color': '#FAFAFA',
-            'grid_color': '#374151',
-            'line_color': '#374151'
+            'font_color': '#F1F5F9',
+            'grid_color': '#475569',
+            'line_color': '#475569'
         }
     return {
-        'template': 'plotly_white',
-        'paper_bgcolor': 'rgba(255,255,255,1)',
-        'plot_bgcolor': 'rgba(255,255,255,1)',
-        'font_color': '#1E1E1E',
+        'template': 'none',
+        'paper_bgcolor': 'rgba(0,0,0,0)',
+        'plot_bgcolor': 'rgba(0,0,0,0)',
+        'font_color': '#1E293B',
         'grid_color': '#E2E8F0',
-        'line_color': '#E2E8F0'
+        'line_color': '#CBD5E1'
     }
 
 

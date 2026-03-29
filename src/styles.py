@@ -22,7 +22,7 @@ LIGHT_THEME = """
         --success: #22c55e;
         --warning: #f59e0b;
         --danger: #ef4444;
-        --bg-main: #FAFAFA;
+        --bg-main: #F8FAFC;
         --bg-card: #FFFFFF;
         --bg-secondary: #F1F5F9;
         --text-primary: #1E1E1E;
@@ -32,6 +32,11 @@ LIGHT_THEME = """
 
     .stApp {
         background-color: var(--bg-main);
+    }
+
+    /* Plotly 图表背景透明 */
+    .js-plotly-plot .plotly .bg {
+        fill: transparent !important;
     }
 
     /* 卡片样式 */
@@ -89,12 +94,19 @@ LIGHT_THEME = """
     /* Tab 样式 */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
+        background: transparent;
     }
 
     .stTabs [data-baseweb="tab"] {
         border-radius: 8px 8px 0 0;
         padding: 10px 20px;
         font-weight: 500;
+        background: var(--bg-secondary);
+    }
+
+    .stTabs [aria-selected="true"] {
+        background: var(--bg-card);
+        border-bottom: 2px solid var(--secondary);
     }
 
     /* Expander 样式 */
@@ -111,66 +123,70 @@ LIGHT_THEME = """
 
     /* 标题样式 */
     .main-title {
-        font-size: 2.5rem;
+        font-size: 2.2rem;
         font-weight: 700;
         color: var(--primary);
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.3rem;
     }
 
     .sub-title {
-        font-size: 1.1rem;
+        font-size: 1rem;
         color: var(--text-secondary);
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
     }
 
     .section-title {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         font-weight: 600;
         color: var(--primary);
-        margin: 1rem 0;
+        margin: 0.8rem 0;
     }
 
-    /* 预警样式 */
+    /* 预警样式 - 更紧凑 */
     .alert-danger {
         background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
         border-left: 4px solid var(--danger);
-        padding: 12px 16px;
-        border-radius: 0 8px 8px 0;
-        margin: 8px 0;
+        padding: 8px 12px;
+        border-radius: 0 6px 6px 0;
+        margin: 4px 0;
+        font-size: 0.9rem;
     }
 
     .alert-warning {
         background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
         border-left: 4px solid var(--warning);
-        padding: 12px 16px;
-        border-radius: 0 8px 8px 0;
-        margin: 8px 0;
+        padding: 8px 12px;
+        border-radius: 0 6px 6px 0;
+        margin: 4px 0;
+        font-size: 0.9rem;
     }
 
     .alert-success {
         background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
         border-left: 4px solid var(--success);
-        padding: 12px 16px;
-        border-radius: 0 8px 8px 0;
-        margin: 8px 0;
+        padding: 8px 12px;
+        border-radius: 0 6px 6px 0;
+        margin: 4px 0;
+        font-size: 0.9rem;
     }
 
     .alert-info {
         background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
         border-left: 4px solid #3b82f6;
-        padding: 12px 16px;
-        border-radius: 0 8px 8px 0;
-        margin: 8px 0;
+        padding: 8px 12px;
+        border-radius: 0 6px 6px 0;
+        margin: 4px 0;
+        font-size: 0.9rem;
     }
 
     /* 页脚样式 */
     .footer {
         text-align: center;
-        padding: 1.5rem;
+        padding: 1rem;
         color: var(--text-secondary);
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         border-top: 1px solid var(--border-color);
-        margin-top: 2rem;
+        margin-top: 1.5rem;
     }
 
     .footer a {
@@ -180,6 +196,21 @@ LIGHT_THEME = """
 
     .footer a:hover {
         text-decoration: underline;
+    }
+
+    /* 分隔线 */
+    hr {
+        border-color: var(--border-color);
+        margin: 0.5rem 0;
+    }
+
+    /* 卡片容器 */
+    .card-container {
+        background: var(--bg-card);
+        border-radius: 12px;
+        padding: 16px;
+        margin: 8px 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
 </style>
 """
@@ -193,17 +224,26 @@ DARK_THEME = """
         --success: #34D399;
         --warning: #FBBF24;
         --danger: #F87171;
-        --bg-main: #0E1117;
-        --bg-card: #1E1E1E;
-        --bg-secondary: #262730;
-        --text-primary: #FAFAFA;
-        --text-secondary: #9CA3AF;
-        --border-color: #374151;
+        --bg-main: #0F172A;
+        --bg-card: #1E293B;
+        --bg-secondary: #334155;
+        --text-primary: #F1F5F9;
+        --text-secondary: #94A3B8;
+        --border-color: #475569;
     }
 
     .stApp {
         background-color: var(--bg-main);
         color: var(--text-primary);
+    }
+
+    /* Plotly 图表背景透明 */
+    .js-plotly-plot .plotly .bg {
+        fill: transparent !important;
+    }
+
+    .js-plotly-plot .plotly .modebar {
+        background: transparent !important;
     }
 
     /* 卡片样式 */
@@ -262,7 +302,7 @@ DARK_THEME = """
     /* Tab 样式 */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
-        background: var(--bg-secondary);
+        background: transparent;
     }
 
     .stTabs [data-baseweb="tab"] {
@@ -270,11 +310,13 @@ DARK_THEME = """
         padding: 10px 20px;
         font-weight: 500;
         color: var(--text-secondary);
+        background: var(--bg-secondary);
     }
 
     .stTabs [aria-selected="true"] {
         color: var(--text-primary);
         background: var(--bg-card);
+        border-bottom: 2px solid var(--secondary);
     }
 
     /* Expander 样式 */
@@ -293,60 +335,64 @@ DARK_THEME = """
 
     /* 标题样式 */
     .main-title {
-        font-size: 2.5rem;
+        font-size: 2.2rem;
         font-weight: 700;
         color: var(--primary);
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.3rem;
     }
 
     .sub-title {
-        font-size: 1.1rem;
+        font-size: 1rem;
         color: var(--text-secondary);
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
     }
 
     .section-title {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         font-weight: 600;
         color: var(--primary);
-        margin: 1rem 0;
+        margin: 0.8rem 0;
     }
 
-    /* 预警样式 */
+    /* 预警样式 - 更紧凑 */
     .alert-danger {
         background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%);
         border-left: 4px solid var(--danger);
-        padding: 12px 16px;
-        border-radius: 0 8px 8px 0;
-        margin: 8px 0;
+        padding: 8px 12px;
+        border-radius: 0 6px 6px 0;
+        margin: 4px 0;
         color: #fecaca;
+        font-size: 0.9rem;
     }
 
     .alert-warning {
         background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
         border-left: 4px solid var(--warning);
-        padding: 12px 16px;
-        border-radius: 0 8px 8px 0;
-        margin: 8px 0;
+        padding: 8px 12px;
+        border-radius: 0 6px 6px 0;
+        margin: 4px 0;
         color: #fde68a;
+        font-size: 0.9rem;
     }
 
     .alert-success {
         background: linear-gradient(135deg, #052e16 0%, #14532d 100%);
         border-left: 4px solid var(--success);
-        padding: 12px 16px;
-        border-radius: 0 8px 8px 0;
-        margin: 8px 0;
+        padding: 8px 12px;
+        border-radius: 0 6px 6px 0;
+        margin: 4px 0;
         color: #86efac;
+        font-size: 0.9rem;
     }
 
     .alert-info {
         background: linear-gradient(135deg, #0c4a6e 0%, #155e75 100%);
         border-left: 4px solid #60A5FA;
-        padding: 12px 16px;
-        border-radius: 0 8px 8px 0;
-        margin: 8px 0;
+        padding: 8px 12px;
+        border-radius: 0 6px 6px 0;
+        margin: 4px 0;
         color: #93c5fd;
+        font-size: 0.9rem;
     }
 
     /* 侧边栏样式 */
@@ -380,11 +426,11 @@ DARK_THEME = """
     /* 页脚样式 */
     .footer {
         text-align: center;
-        padding: 1.5rem;
+        padding: 1rem;
         color: var(--text-secondary);
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         border-top: 1px solid var(--border-color);
-        margin-top: 2rem;
+        margin-top: 1.5rem;
     }
 
     .footer a {
@@ -396,9 +442,10 @@ DARK_THEME = """
         text-decoration: underline;
     }
 
-    /* Plotly 图表深色背景 */
-    .js-plotly-plot .plotly .modebar {
-        background: transparent !important;
+    /* 分隔线 */
+    hr {
+        border-color: var(--border-color);
+        margin: 0.5rem 0;
     }
 </style>
 """
