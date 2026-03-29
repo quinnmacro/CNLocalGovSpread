@@ -36,11 +36,7 @@ from evt import EVTRiskAnalyzer
 from visualization import (
     plot_signal_trend,
     plot_volatility_structure,
-    plot_tail_risk,
-    print_var_comparison,
-    plot_multi_tenor_spread,
-    plot_tenor_spread_correlation,
-    plot_tenor_spread_statistics
+    plot_tail_risk
 )
 from styles import (
     apply_theme,
@@ -56,8 +52,6 @@ from scenarios import (
     run_multi_scenario_stress,
     run_monte_carlo,
     plot_mc_simulation,
-    run_sensitivity_analysis,
-    plot_sensitivity_analysis,
     calculate_rolling_stats,
     detect_historical_events,
     plot_rolling_stats,
@@ -66,21 +60,13 @@ from scenarios import (
 from alerts import check_risk_alerts, get_risk_score
 from report_gen import generate_report, get_report_history, generate_quick_report
 from content import (
-    render_market_context,
-    render_theory_expander,
-    render_metric_interpretation,
-    render_trading_advice,
     render_quick_reference,
     render_report_guide,
+    render_metric_interpretation,
+    render_trading_advice,
     get_spread_position_comment,
     get_volatility_comment,
-    get_var_comment,
-    KALMAN_THEORY,
-    GARCH_THEORY,
-    EVT_THEORY,
-    SCENARIO_THEORY,
-    HISTORY_THEORY,
-    INTERPRETATION_GUIDE
+    get_var_comment
 )
 
 # ============================================================================
@@ -487,7 +473,7 @@ if st.session_state.analysis_done:
     # =========================================================================
     with tab3:
         # 核心说明 - 直接显示
-        st.warning("""
+        st.info("""
         **📖 风险分析**: 极值理论(EVT)专注于尾部风险
 
         • **VaR**: 给定置信度下的最大可能损失
