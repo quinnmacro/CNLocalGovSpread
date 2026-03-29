@@ -15,6 +15,7 @@ from data_engine import DataEngine
 from volatility import VolatilityModeler
 from kalman import KalmanSignalExtractor
 from evt import EVTRiskAnalyzer
+from export import export_to_excel
 
 
 # ============================================================================
@@ -99,7 +100,7 @@ class TestVolatilityModeler:
         """测试锦标赛返回获胜模型名称"""
         modeler = VolatilityModeler(sample_returns)
         winner = modeler.run_tournament()
-        assert winner in ['GARCH', 'EGARCH', 'GJR-GARCH']
+        assert winner in ['GARCH', 'EGARCH', 'GJR-GARCH', 'EWMA']  # 新增 EWMA
 
     def test_tournament_populates_ic_scores(self, sample_returns):
         """测试锦标赛填充 IC 分数"""
@@ -108,9 +109,20 @@ class TestVolatilityModeler:
         assert 'GARCH' in modeler.ic_scores
         assert 'EGARCH' in modeler.ic_scores
         assert 'GJR-GARCH' in modeler.ic_scores
+        assert 'EWMA' in modeler.ic_scores  # 新增 EWMA 测试
         for scores in modeler.ic_scores.values():
             assert 'AIC' in scores
             assert 'BIC' in scores
+
+    def test_fit_ewma(self, sample_returns):
+        """测试 EWMA 模型"""
+        modeler = VolatilityModeler(sample_returns)
+        vol = modeler.fit_ewma()
+        assert 'EWMA' in modeler.models
+        assert 'EWMA' in modeler.ic_scores
+        assert modeler.ic_scores['EWMA']['AIC'] < np.inf
+        assert isinstance(vol, pd.Series)
+        assert (vol > 0).all()  # 波动率必须为正
 
     def test_get_conditional_volatility(self, sample_returns):
         """测试获取条件波动率"""
@@ -210,6 +222,15 @@ class TestEVTRiskAnalyzer:
         if tail_index is not None:
             assert tail_index > 0
 
+    def test_calculate_es(self, sample_returns):
+        """测试 Expected Shortfall 计算"""
+        analyzer = EVTRiskAnalyzer(sample_returns)
+        analyzer.fit_gpd()
+        analyzer.calculate_var()
+        es = analyzer.calculate_es()
+        assert es is not None
+        assert es >= analyzer.var  # ES 必须 >= VaR
+
 
 # ============================================================================
 # 集成测试
@@ -242,7 +263,46 @@ class TestIntegration:
         evt = EVTRiskAnalyzer(returns)
         evt.fit_gpd()
         var = evt.calculate_var()
+        es = evt.calculate_es()  # 新增 ES 测试
         assert var is not None
+        assert es is not None
+
+
+# ============================================================================
+# Excel导出测试
+# ============================================================================
+
+class TestExcelExport:
+    """Excel导出功能测试"""
+
+    def test_export_to_excel(self, test_config, tmp_path):
+        """测试Excel导出"""
+        import os
+
+        # 准备数据
+        engine = DataEngine(test_config)
+        engine.load_data()
+        clean_data = engine.clean_data()
+        returns = engine.get_returns()
+
+        # 导出
+        output_path = str(tmp_path / "test_export.xlsx")
+        export_to_excel(
+            output_path,
+            clean_data=clean_data,
+            returns=returns,
+            evt_var=10.5,
+            evt_es=12.3,
+            config=test_config
+        )
+
+        # 验证文件存在
+        assert os.path.exists(output_path)
+
+        # 验证内容
+        xls = pd.ExcelFile(output_path)
+        assert '原始数据' in xls.sheet_names
+        assert '风险指标' in xls.sheet_names
 
 
 if __name__ == '__main__':

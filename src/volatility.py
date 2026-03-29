@@ -8,6 +8,7 @@
 """
 
 import numpy as np
+import pandas as pd
 from arch import arch_model
 
 
@@ -89,15 +90,66 @@ class VolatilityModeler:
             print(f"   ✗ GJR-GARCH 拟合失败: {str(e)}")
             self.ic_scores['GJR-GARCH'] = {'AIC': np.inf, 'BIC': np.inf}
 
+    def fit_ewma(self, lambda_param=0.94):
+        """
+        EWMA (Exponentially Weighted Moving Average) 波动率模型
+
+        RiskMetrics 标准方法:
+        - lambda = 0.94 (日频数据标准值)
+        - 公式: σ²_t = λ * σ²_{t-1} + (1-λ) * r²_{t-1}
+
+        优点: 无需优化，计算简单，业界标准基准
+
+        参数:
+        - lambda_param: 衰减因子，默认0.94 (RiskMetrics标准)
+        """
+        print("\n[4/4] 计算 EWMA 波动率...")
+
+        returns = self.returns.values
+        n = len(returns)
+
+        # 初始化方差序列
+        variance = np.zeros(n)
+        variance[0] = returns[0] ** 2
+
+        # EWMA 递推
+        for t in range(1, n):
+            variance[t] = lambda_param * variance[t-1] + (1 - lambda_param) * returns[t-1] ** 2
+
+        volatility = np.sqrt(variance)
+
+        # 创建 pandas Series
+        ewma_volatility = pd.Series(volatility, index=self.returns.index)
+
+        # 计算对数似然 (假设正态分布)
+        # 避免 log(0) 的问题
+        valid_idx = variance[1:] > 0
+        log_likelihood = -0.5 * np.sum(
+            np.log(variance[1:][valid_idx]) + returns[1:][valid_idx]**2 / variance[1:][valid_idx]
+        )
+
+        # AIC: 只有一个参数 lambda
+        aic = 2 * 1 - 2 * log_likelihood
+        bic = aic  # 单参数模型
+
+        self.models['EWMA'] = {'volatility': ewma_volatility, 'lambda': lambda_param}
+        self.ic_scores['EWMA'] = {'AIC': aic, 'BIC': bic}
+
+        print(f"   λ = {lambda_param} (RiskMetrics 标准)")
+        print(f"   AIC={aic:.2f}, BIC={bic:.2f}")
+
+        return ewma_volatility
+
     def run_tournament(self):
         """执行锦标赛 - 拟合所有模型并选出 Winner"""
         print("\n" + "="*60)
-        print("开始 GARCH 模型锦标赛")
+        print("开始波动率模型锦标赛")
         print("="*60)
 
         self.fit_garch()
         self.fit_egarch()
         self.fit_gjr_garch()
+        self.fit_ewma()  # 新增 EWMA 基准模型
 
         # 根据 AIC 选出最佳模型（AIC 越小越好）
         # 为什么用 AIC 而不是 BIC？BIC 对参数数量惩罚更重，可能过于保守
@@ -113,9 +165,14 @@ class VolatilityModeler:
 
     def get_conditional_volatility(self, model_name):
         """提取条件波动率序列"""
-        if model_name not in self.results:
-            raise ValueError(f"模型 {model_name} 未拟合")
-
-        # conditional_volatility 是 GARCH 模型的核心输出
-        # 它告诉我们「在给定历史信息下，今天的预期波动率是多少」
-        return self.results[model_name].conditional_volatility
+        if model_name == 'EWMA':
+            # EWMA 存储在 models 字典中
+            if 'EWMA' not in self.models:
+                raise ValueError("EWMA 模型未计算")
+            return self.models['EWMA']['volatility']
+        else:
+            if model_name not in self.results:
+                raise ValueError(f"模型 {model_name} 未拟合")
+            # conditional_volatility 是 GARCH 模型的核心输出
+            # 它告诉我们「在给定历史信息下，今天的预期波动率是多少」
+            return self.results[model_name].conditional_volatility

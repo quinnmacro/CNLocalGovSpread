@@ -24,6 +24,7 @@ class EVTRiskAnalyzer:
         self.threshold = None
         self.gpd_params = None
         self.var = None
+        self.es = None  # Expected Shortfall
 
     def fit_gpd(self):
         """
@@ -119,3 +120,54 @@ class EVTRiskAnalyzer:
             return None
         # 尾部指数 = 1/ξ（ξ 越大，尾部越重）
         return 1 / self.gpd_params['shape'] if self.gpd_params['shape'] > 0 else np.inf
+
+    def calculate_es(self):
+        """
+        计算 Expected Shortfall (Conditional VaR)
+
+        ES = E[Loss | Loss > VaR]
+        也称为 CVaR (Conditional VaR) 或 AVaR (Average VaR)
+
+        对于 GPD 分布，ES 有解析解:
+        ES_α = VaR_α + (σ + ξ * (VaR_α - u)) / (1 - ξ)
+
+        条件: ξ < 1 (否则ES不存在)
+        """
+        if self.var is None:
+            raise ValueError("请先调用 calculate_var()")
+
+        print("\n" + "="*60)
+        print("计算 Expected Shortfall (CVaR)")
+        print("="*60)
+
+        if self.gpd_params is None:
+            # 经验 ES: 超过 VaR 的值的平均
+            exceed_var = self.returns[self.returns > self.var]
+            if len(exceed_var) > 0:
+                self.es = exceed_var.mean()
+            else:
+                self.es = self.var  # fallback
+
+            print(f"使用经验方法: {self.confidence*100}% ES = {self.es:.2f} bps")
+            return self.es
+
+        shape = self.gpd_params['shape']
+        scale = self.gpd_params['scale']
+
+        if shape >= 1:
+            # ES 不存在
+            print(f"⚠️  ξ = {shape:.4f} >= 1, Expected Shortfall 不存在")
+            self.es = np.inf
+            return self.es
+
+        # GPD-based ES 公式
+        self.es = self.var + (scale + shape * (self.var - self.threshold)) / (1 - shape)
+
+        print(f"🎯 Expected Shortfall ({self.confidence*100}% 置信水平)")
+        print(f"   ES = {self.es:.2f} bps")
+        print(f"   VaR = {self.var:.2f} bps")
+        print(f"   ES/VaR 比率 = {self.es/self.var:.2%}")
+        print(f"   解读: 在最坏的1%交易日中,平均损失为 {self.es:.2f} bps")
+        print("="*60)
+
+        return self.es

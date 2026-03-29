@@ -37,6 +37,7 @@ scikit-learn>=0.24.0        # For additional statistical tools (optional)
 # Development Tools
 # ============================================================================
 pytest>=6.2.0              # Unit testing
+openpyxl>=3.1.0            # Excel export
 # black>=21.0                # Code formatting
 # flake8>=3.9.0              # Code linting
 # jupyter-contrib-nbextensions  # Notebook extensions

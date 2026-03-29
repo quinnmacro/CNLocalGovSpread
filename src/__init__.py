@@ -25,8 +25,9 @@ from .visualization import (
     print_var_comparison
 )
 from .report import generate_strategic_report
+from .export import export_to_excel
 
-__version__ = '1.0.0'
+__version__ = '1.1.0'
 __author__ = 'Quinn Liu'
 
 __all__ = [
@@ -38,5 +39,6 @@ __all__ = [
     'plot_volatility_structure',
     'plot_tail_risk',
     'print_var_comparison',
-    'generate_strategic_report'
+    'generate_strategic_report',
+    'export_to_excel'
 ]

@@ -12,10 +12,14 @@ def generate_strategic_report(
     smoothed_spread,
     signal_deviation,
     winner_volatility,
-    evt_var
+    evt_var,
+    evt_es=None
 ):
     """
     生成战略分析报告
+
+    参数:
+    - evt_es: Expected Shortfall值 (可选)
     """
     print("\n" + "="*80)
     print(" " * 20 + "中国地方债利差战略分析报告")
@@ -84,6 +88,8 @@ def generate_strategic_report(
     print(f"  偏离程度:            {deviation_bps:+.2f} bps ({deviation_sigma:+.2f}σ)")
     print(f"  当前波动率:          {current_vol:.2f} bps/日")
     print(f"  99% EVT-VaR:        {evt_var:.2f} bps (单日最大风险)")
+    if evt_es is not None:
+        print(f"  99% EVT-ES:         {evt_es:.2f} bps (尾部平均损失)")
 
     # 风险等级判定
     print("\n  风险等级判定:")
