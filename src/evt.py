@@ -25,6 +25,7 @@ class EVTRiskAnalyzer:
         self.gpd_params = None
         self.var = None
         self.es = None  # Expected Shortfall
+        self.hill_estimator = None  # Hill估计量结果
 
     def fit_gpd(self):
         """
@@ -171,3 +172,79 @@ class EVTRiskAnalyzer:
         print("="*60)
 
         return self.es
+
+    def estimate_hill(self, k_percentile=0.10):
+        """
+        使用Hill估计量估计尾部指数
+
+        Hill估计量是尾部指数的非参数估计方法，可交叉验证GPD拟合结果。
+
+        参数:
+        - k_percentile: 极值样本占比，默认10%
+
+        返回:
+        - hill_tail_index: Hill尾部指数
+
+        公式:
+        ξ_Hill = 1/k * Σ[log(X_i / X_{k+1})]
+        其中 X_{k+1} 是第(k+1)大的观测值（阈值）
+        """
+        if self.returns is None:
+            raise ValueError("数据未加载")
+
+        # 排序收益率（降序，取正尾部）
+        sorted_returns = np.sort(self.returns.values)[::-1]
+
+        # 确定k值（极值样本数）
+        k = int(len(sorted_returns) * k_percentile)
+        if k < 10:
+            k = 10  # 最少10个极值样本
+        if k > len(sorted_returns) - 1:
+            k = len(sorted_returns) - 1
+
+        # Hill估计量计算
+        threshold = sorted_returns[k]
+        exceedances = sorted_returns[:k]
+
+        # ξ_Hill = 1/k * Σ[log(X_i / threshold)]
+        log_sum = np.sum(np.log(exceedances / threshold))
+        hill_xi = log_sum / k
+
+        # 尾部指数 = 1/ξ
+        if hill_xi > 0:
+            hill_tail_index = 1 / hill_xi
+        else:
+            hill_tail_index = np.inf
+
+        self.hill_estimator = {
+            'tail_index': hill_tail_index,
+            'shape': hill_xi,
+            'threshold': threshold,
+            'k': k
+        }
+
+        print("\n" + "="*60)
+        print("Hill估计量结果")
+        print("="*60)
+        print(f"  极值样本数 k = {k}")
+        print(f"  阈值 = {threshold:.2f} bps")
+        print(f"  形状参数 ξ_Hill = {hill_xi:.4f}")
+        print(f"  尾部指数 α = {hill_tail_index:.2f}")
+
+        # 与GPD结果对比
+        if self.gpd_params is not None:
+            gpd_xi = self.gpd_params['shape']
+            diff = hill_xi - gpd_xi
+            pct_diff = diff / gpd_xi * 100 if gpd_xi != 0 else 0
+            print(f"\n  与GPD对比:")
+            print(f"    GPD ξ  = {gpd_xi:.4f}")
+            print(f"    Hill ξ = {hill_xi:.4f}")
+            print(f"    差异   = {diff:.4f} ({pct_diff:.1f}%)")
+            if abs(pct_diff) < 20:
+                print(f"    ✓ 两种方法结果接近，尾部估计稳健")
+            else:
+                print(f"    ⚠️  差异较大，建议检查阈值选择")
+
+        print("="*60)
+
+        return hill_tail_index

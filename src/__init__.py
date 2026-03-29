@@ -15,7 +15,7 @@ LinkedIn: https://www.linkedin.com/in/liulu-math
 """
 
 from .data_engine import DataEngine
-from .volatility import VolatilityModeler
+from .volatility import VolatilityModeler, RegimeDetector
 from .kalman import KalmanSignalExtractor
 from .evt import EVTRiskAnalyzer
 from .visualization import (
@@ -27,12 +27,13 @@ from .visualization import (
 from .report import generate_strategic_report
 from .export import export_to_excel
 
-__version__ = '1.1.0'
+__version__ = '1.2.0'
 __author__ = 'Quinn Liu'
 
 __all__ = [
     'DataEngine',
     'VolatilityModeler',
+    'RegimeDetector',
     'KalmanSignalExtractor',
     'EVTRiskAnalyzer',
     'plot_signal_trend',

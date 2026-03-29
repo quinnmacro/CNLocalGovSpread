@@ -176,3 +176,105 @@ class VolatilityModeler:
             # conditional_volatility 是 GARCH 模型的核心输出
             # 它告诉我们「在给定历史信息下，今天的预期波动率是多少」
             return self.results[model_name].conditional_volatility
+
+
+class RegimeDetector:
+    """
+    波动率状态切换检测器
+
+    使用隐马尔可夫模型(HMM)识别不同的波动率状态：
+    - 状态0: 低波动
+    - 状态1: 中波动
+    - 状态2: 高波动
+    """
+
+    def __init__(self, volatility_series, n_regimes=3):
+        """
+        参数:
+        - volatility_series: 条件波动率序列
+        - n_regimes: 状态数量，默认3个 (低/中/高)
+        """
+        self.volatility = volatility_series
+        self.n_regimes = n_regimes
+        self.model = None
+        self.regime_labels = None
+        self.regime_stats = None
+
+    def fit(self):
+        """
+        拟合HMM模型
+
+        输出:
+        - regime_labels: 每个时点的状态标签 (0, 1, 2)
+        - regime_stats: 每个状态的统计特征
+        """
+        from hmmlearn import hmm
+
+        # 准备数据
+        X = self.volatility.values.reshape(-1, 1)
+
+        # 拟合高斯HMM
+        self.model = hmm.GaussianHMM(
+            n_components=self.n_regimes,
+            covariance_type='full',
+            n_iter=100,
+            random_state=42
+        )
+        self.model.fit(X)
+
+        # 预测状态
+        self.regime_labels = self.model.predict(X)
+
+        # 计算每个状态的统计特征
+        self.regime_stats = {}
+        for i in range(self.n_regimes):
+            mask = self.regime_labels == i
+            vol_in_regime = self.volatility[mask]
+            self.regime_stats[i] = {
+                'mean': vol_in_regime.mean(),
+                'std': vol_in_regime.std(),
+                'count': len(vol_in_regime),
+                'pct': len(vol_in_regime) / len(self.volatility) * 100
+            }
+
+        # 按均值排序状态 (0=低, 1=中, 2=高)
+        means = [self.regime_stats[i]['mean'] for i in range(self.n_regimes)]
+        sorted_order = np.argsort(means)
+        label_mapping = {old: new for new, old in enumerate(sorted_order)}
+        self.regime_labels = np.array([label_mapping[l] for l in self.regime_labels])
+
+        # 更新统计特征
+        new_stats = {}
+        for old_label, new_label in label_mapping.items():
+            new_stats[new_label] = self.regime_stats[old_label]
+        self.regime_stats = new_stats
+
+        return self.regime_labels
+
+    def get_current_regime(self):
+        """返回当前状态"""
+        if self.regime_labels is None:
+            raise ValueError("请先调用 fit()")
+        return self.regime_labels[-1]
+
+    def get_regime_name(self, regime_id):
+        """返回状态名称"""
+        names = {0: '低波动', 1: '中波动', 2: '高波动'}
+        return names.get(regime_id, f'状态{regime_id}')
+
+    def print_regime_summary(self):
+        """打印状态摘要"""
+        print("\n" + "="*60)
+        print("波动率状态切换分析")
+        print("="*60)
+
+        for i in range(self.n_regimes):
+            stats = self.regime_stats[i]
+            print(f"\n{self.get_regime_name(i)}:")
+            print(f"  平均波动率: {stats['mean']:.2f} bps")
+            print(f"  波动率标准差: {stats['std']:.2f} bps")
+            print(f"  样本占比: {stats['pct']:.1f}%")
+
+        current = self.get_current_regime()
+        print(f"\n当前状态: {self.get_regime_name(current)}")
+        print("="*60)

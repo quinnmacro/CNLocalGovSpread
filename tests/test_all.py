@@ -12,7 +12,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from data_engine import DataEngine
-from volatility import VolatilityModeler
+from volatility import VolatilityModeler, RegimeDetector
 from kalman import KalmanSignalExtractor
 from evt import EVTRiskAnalyzer
 from export import export_to_excel

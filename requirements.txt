@@ -38,6 +38,8 @@ scikit-learn>=0.24.0        # For additional statistical tools (optional)
 # ============================================================================
 pytest>=6.2.0              # Unit testing
 openpyxl>=3.1.0            # Excel export
+hmmlearn>=0.2.7            # Hidden Markov Model for regime detection
+streamlit>=1.20.0          # Web dashboard
 # black>=21.0                # Code formatting
 # flake8>=3.9.0              # Code linting
 # jupyter-contrib-nbextensions  # Notebook extensions
