@@ -86,12 +86,14 @@ class EVTRiskAnalyzer:
         计算 EVT-VaR（基于 GPD 的 Value at Risk）
 
         公式（POT 方法）:
-        VaR_α = u + (σ/ξ) * [ ((1-α)/(1-u_percentile))^(-ξ) - 1 ]
+        VaR_α = u + (σ/ξ) * [ ((n/N_u) * (1-α))^(-ξ) - 1 ]
 
         其中:
         - u: 阈值
         - σ, ξ: GPD 参数
         - α: 置信水平（如 0.99）
+        - n: 总样本数
+        - N_u: 超过阈值的样本数
         """
         if self.gpd_params is None:
             # Fallback: 使用经验分位数
@@ -111,12 +113,24 @@ class EVTRiskAnalyzer:
         # 超过阈值的概率
         p_exceed = 1 - self.threshold_percentile
 
+        # P0修复: 计算样本比例因子 n/N_u
+        # 正确的EVT-VaR公式: VaR = u + (σ/ξ) * [((n/N_u) * (1-α))^(-ξ) - 1]
+        # 其中 n 是总样本数，N_u 是超过阈值的样本数
+        exceedances = self.returns[self.returns > self.threshold]
+        n_u = len(exceedances)  # 超过阈值的样本数
+        n_total = len(self.returns)  # 总样本数
+
+        if n_u == 0:
+            print(f"⚠️ 没有超过阈值的样本，使用经验分位数")
+            self.var = self.returns.quantile(self.confidence)
+            return self.var
+
         # EVT-VaR 公式
         if abs(shape) < 1e-6:  # shape ≈ 0 时，用指数分布公式
-            self.var = self.threshold + scale * np.log((1 - self.confidence) / p_exceed)
+            self.var = self.threshold - scale * np.log((n_total / n_u) * (1 - self.confidence))
         else:
-            # 安全计算，防止溢出
-            exponent_term = ((1 - self.confidence) / p_exceed) ** (-shape)
+            # 安全计算，防止溢出 - 使用正确的样本比例因子
+            exponent_term = ((n_total / n_u) * (1 - self.confidence)) ** (-shape)
 
             # 检查指数项是否溢出
             if np.isinf(exponent_term) or np.isnan(exponent_term) or exponent_term > 1e10:

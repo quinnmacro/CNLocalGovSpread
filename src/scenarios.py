@@ -24,28 +24,37 @@ def run_stress_test(returns, shock, confidence=0.99):
     运行压力测试
 
     参数:
-        returns: 收益率序列
-        shock: 利差冲击值 (bps)
+        returns: 利差变化序列 (bps/day)
+        shock: 利差冲击值 (bps)，表示单日极端变化
         confidence: VaR置信水平
 
     返回:
         dict: 压力测试结果
+
+    P0修复: 明确风险方向
+    - 对于地方债利差，我们关注的是"利差扩大"风险（正值代表风险）
+    - VaR应取右尾（上侧分位数），而非左尾
+    - shock表示假设单日发生如此大的利差变化，评估风险敞口
     """
-    # 添加冲击后的收益率分布
+    # 压力情景：假设发生shock大小的利差变化
+    # 这里shock直接加到收益率序列上，模拟"如果发生X bps的变化"
     stressed_returns = returns + shock
 
-    # 计算压力VaR
-    var = stressed_returns.quantile(1 - confidence)
+    # P0修复: 对于利差扩大风险，取上侧分位数（右尾）
+    # VaR(confidence) 表示有confidence的概率损失不超过此值
+    # 对于利差变化，大的正值代表风险，所以取 confidence 分位数（如99%）
+    var = stressed_returns.quantile(confidence)
 
-    # 计算压力ES
-    es_threshold = stressed_returns.quantile(1 - confidence)
-    es = stressed_returns[stressed_returns > es_threshold].mean() if len(stressed_returns[stressed_returns > es_threshold]) > 0 else es_threshold
+    # 计算压力ES：超过VaR的平均损失
+    es_threshold = var
+    es_values = stressed_returns[stressed_returns > es_threshold]
+    es = es_values.mean() if len(es_values) > 0 else es_threshold
 
     # 计算最大损失
     max_loss = stressed_returns.max()
 
     # 计算冲击影响
-    original_var = returns.quantile(1 - confidence)
+    original_var = returns.quantile(confidence)
     var_change = var - original_var
 
     return {
@@ -89,38 +98,57 @@ def run_multi_scenario_stress(returns, shock_range=(-50, 50), n_scenarios=21):
 # 蒙特卡洛模拟
 # ============================================================================
 
-def run_monte_carlo(returns, n_simulations=10000, horizon=10, seed=None):
+def run_monte_carlo(returns, n_simulations=10000, horizon=10, seed=None, initial_value=0):
     """
     运行蒙特卡洛模拟
 
     参数:
-        returns: 历史收益率序列
+        returns: 历史收益率序列（利差变化）
         n_simulations: 模拟次数
         horizon: 预测天数
         seed: 随机种子
+        initial_value: 初始值（默认为0，表示从当前利差水平开始）
 
     返回:
         dict: 模拟结果
+
+    P0修复: 使用AR(1)模型捕捉均值回归特征
+    - 地方债利差具有强烈的均值回归特性，而非随机游走
+    - 使用AR(1)模型可以避免模拟路径的发散
+    - phi接近1表示高持久性，但仍会回归均值
     """
     if seed is not None:
         np.random.seed(seed)
 
-    # 估计参数
-    mu = returns.mean()
-    sigma = returns.std()
+    # 估计AR(1)参数
+    mu = returns.mean()  # 长期均值
+    sigma = returns.std()  # 波动率
+
+    # 估计AR(1)系数（简单OLS）
+    returns_lag = returns.shift(1).dropna()
+    returns_current = returns.iloc[1:]
+    if len(returns_lag) > 10:
+        # AR(1)系数估计
+        phi = np.corrcoef(returns_lag, returns_current)[0, 1]
+        phi = max(0, min(phi, 0.99))  # 确保平稳性
+    else:
+        phi = 0.5  # 默认中等持久性
 
     # 使用 t 分布拟合尾部
     df, loc, scale = stats.t.fit(returns)
 
-    # 模拟路径
+    # 模拟路径 - 使用AR(1)均值回归模型
     n_steps = horizon
     paths = np.zeros((n_simulations, n_steps + 1))
-    paths[:, 0] = 0  # 初始值
+    paths[:, 0] = initial_value  # 初始值
 
-    # 生成随机数（使用 t 分布）
+    # AR(1) + t分布残差的蒙特卡洛模拟
+    # 公式: X_t = mu + phi * (X_{t-1} - mu) + epsilon_t
     for t in range(1, n_steps + 1):
-        random_shocks = stats.t.rvs(df, loc=loc, scale=scale, size=n_simulations)
-        paths[:, t] = paths[:, t - 1] + random_shocks
+        # 生成随机冲击（使用 t 分布捕捉肥尾）
+        random_shocks = stats.t.rvs(df, loc=0, scale=scale, size=n_simulations)
+        # AR(1) 均值回归
+        paths[:, t] = mu + phi * (paths[:, t - 1] - mu) + random_shocks
 
     # 计算最终分布
     final_values = paths[:, -1]
@@ -142,7 +170,8 @@ def run_monte_carlo(returns, n_simulations=10000, horizon=10, seed=None):
             'sigma': sigma,
             'df': df,
             'loc': loc,
-            'scale': scale
+            'scale': scale,
+            'phi': phi  # P0修复: 添加AR(1)系数
         }
     }
 

@@ -112,7 +112,8 @@ def plot_signal_trend(clean_data, smoothed_spread, signal_deviation, theme='ligh
         line=dict(color='#3b82f6', width=2.5)
     ))
 
-    # 置信区间
+    # 置信区间 - P0修复: 标注为"残差参考区间"而非统计置信区间
+    # 注: 此区间基于残差样本标准差，非Kalman滤波器的状态协方差
     std = (clean_data['spread'] - smoothed_spread).std()
     fig.add_trace(go.Scatter(
         x=smoothed_spread.index,
@@ -129,29 +130,35 @@ def plot_signal_trend(clean_data, smoothed_spread, signal_deviation, theme='ligh
         line=dict(width=0),
         fill='tonexty',
         fillcolor='rgba(59, 130, 246, 0.15)',
-        name='置信区间 (±1.5σ)',
+        name='参考区间 (±1.5σ, 残差)',
         hoverinfo='skip'
     ))
 
-    # 买入信号（绿色向上三角）
+    # 买入信号（绿色向上三角）- P0修复: 添加索引对齐检查
     if len(buy_signals) > 0:
-        fig.add_trace(go.Scatter(
-            x=buy_signals.index,
-            y=clean_data.loc[buy_signals.index, 'spread'],
-            mode='markers',
-            name='买入信号 (低估)',
-            marker=dict(symbol='triangle-up', size=12, color='#22c55e', line=dict(width=2, color='white'))
-        ))
+        # 确保索引对齐
+        common_index = buy_signals.index.intersection(clean_data.index)
+        if len(common_index) > 0:
+            fig.add_trace(go.Scatter(
+                x=common_index,
+                y=clean_data.loc[common_index, 'spread'],
+                mode='markers',
+                name='买入信号 (低估)',
+                marker=dict(symbol='triangle-up', size=12, color='#22c55e', line=dict(width=2, color='white'))
+            ))
 
-    # 卖出信号（红色向下三角）
+    # 卖出信号（红色向下三角）- P0修复: 添加索引对齐检查
     if len(sell_signals) > 0:
-        fig.add_trace(go.Scatter(
-            x=sell_signals.index,
-            y=clean_data.loc[sell_signals.index, 'spread'],
-            mode='markers',
-            name='卖出信号 (高估)',
-            marker=dict(symbol='triangle-down', size=12, color='#ef4444', line=dict(width=2, color='white'))
-        ))
+        # 确保索引对齐
+        common_index = sell_signals.index.intersection(clean_data.index)
+        if len(common_index) > 0:
+            fig.add_trace(go.Scatter(
+                x=common_index,
+                y=clean_data.loc[common_index, 'spread'],
+                mode='markers',
+                name='卖出信号 (高估)',
+                marker=dict(symbol='triangle-down', size=12, color='#ef4444', line=dict(width=2, color='white'))
+            ))
 
     fig.update_layout(
         title='信号提取 - 卡尔曼滤波分析',
@@ -186,7 +193,9 @@ def plot_volatility_structure(winner_volatility, winner_model, theme='light'):
     """
     config = get_theme_config(theme)
 
+    # P0修复: 标注前视偏差
     # 计算波动率的 90% 分位数（高波动阈值）
+    # 注: 此阈值基于全样本后验计算，实际交易中无法预知未来数据，仅供展示参考
     vol_threshold = winner_volatility.quantile(0.90)
     high_vol_periods = winner_volatility[winner_volatility > vol_threshold]
 
@@ -301,25 +310,25 @@ def plot_tail_risk(returns, evt_var, confidence=0.99, theme='light'):
         opacity=0.7
     ))
 
-    # VaR 标记线（红色虚线）
+    # VaR 标记线（红色虚线）- P0修复: 明确标注为"利差扩大风险"
     fig.add_vline(
         x=evt_var,
         line_dash='dash',
         line_color='#ef4444',
         line_width=3,
-        annotation_text=f'99% EVT-VaR: {evt_var:.4f}',
+        annotation_text=f'99% EVT-VaR (利差扩大风险): {evt_var:.4f}',
         annotation_position='top',
         annotation_font=dict(color='#ef4444', size=11)
     )
 
-    # 也标记经验分位数（对比）
+    # 也标记经验分位数（对比）- P0修复: 明确标注为"上侧分位"
     empirical_var = returns.quantile(confidence)
     fig.add_vline(
         x=empirical_var,
         line_dash='dot',
         line_color='#6b7280',
         line_width=2,
-        annotation_text=f'经验99%分位: {empirical_var:.4f}',
+        annotation_text=f'经验99%上侧分位: {empirical_var:.4f}',
         annotation_position='bottom',
         annotation_font=dict(color='#6b7280', size=10)
     )

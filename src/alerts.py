@@ -38,10 +38,14 @@ def check_risk_alerts(clean_data, returns, evt, vol_modeler,
     """
     alerts = []
 
-    # 1. VaR 预警
+    # 1. VaR 预警 - P0修复: 明确VaR方向定义
+    # 对于利差变化，正值代表利差扩大（风险），VaR是利差扩大的上侧分位数
+    # VaR超限意味着当前利差变化超过了VaR阈值
     if evt is not None and evt.var is not None:
         var = evt.var
         current_return = returns.iloc[-1]
+        # 对于利差扩大风险，VaR是正值上限
+        # 超限条件: 当前利差变化超过VaR（即超过预期的最大损失）
         var_breach = current_return > var
 
         if var_breach:

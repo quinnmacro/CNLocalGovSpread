@@ -62,11 +62,9 @@ class VolatilityModeler:
             self.ic_scores['EGARCH'] = {'AIC': result.aic, 'BIC': result.bic}
             print(f"   AIC={result.aic:.2f}, BIC={result.bic:.2f}")
 
-            # EGARCH 的关键参数：gamma（不对称系数）
-            # gamma < 0 意味着负冲击（利差扩大）会放大波动率
-            if 'gamma[1]' in result.params:
-                gamma = result.params['gamma[1]']
-                print(f"   非对称系数 γ = {gamma:.4f} {'(负冲击放大波动)' if gamma < 0 else '(正冲击放大波动)'}")
+            # P0修复: arch库的EGARCH实现是对称模型，不包含非对称gamma参数
+            # 若需要非对称效应分析，请使用GJR-GARCH模型（fit_gjr_garch方法）
+            # 注: 标准EGARCH的非对称性通过|z_t|项隐式体现，而非显式gamma参数
 
         except Exception as e:
             print(f"   ✗ EGARCH 拟合失败: {str(e)}")
@@ -133,36 +131,42 @@ class VolatilityModeler:
         # 创建 pandas Series
         ewma_volatility = pd.Series(volatility, index=self.returns.index)
 
-        # 计算对数似然 (假设正态分布)
-        # 避免 log(0) 和数值溢出
+        # P0修复: 使用t分布计算对数似然，与GARCH模型保持一致
+        # GARCH模型使用t分布，EWMA若用正态分布则AIC不可直接比较
+        from scipy import stats
+
         valid_idx = variance[1:] > min_variance
         valid_count = np.sum(valid_idx)
 
         if valid_count < 10:
             # 样本太少，使用简化方法
             log_likelihood = -1e6  # 惩罚值
-            aic = 2 * 1 - 2 * log_likelihood
-            bic = aic
+            aic = 2 * 2 - 2 * log_likelihood  # 2参数: lambda + df
+            bic = np.log(valid_count) * 2 - 2 * log_likelihood
         else:
-            # 安全计算对数似然
-            log_terms = np.log(variance[1:][valid_idx])
-            ratio_terms = returns[1:][valid_idx]**2 / variance[1:][valid_idx]
+            # 标准化残差
+            std_resid = returns[1:][valid_idx] / volatility[1:][valid_idx]
 
-            # 检查是否有异常值
-            if np.any(np.isnan(log_terms)) or np.any(np.isinf(log_terms)):
-                log_likelihood = -1e6
-            elif np.any(np.isnan(ratio_terms)) or np.any(np.isinf(ratio_terms)):
-                log_likelihood = -1e6
-            else:
-                log_likelihood = -0.5 * np.sum(log_terms + ratio_terms)
+            # 估计t分布自由度（使用标准化残差）
+            try:
+                df, loc, scale = stats.t.fit(std_resid)
+                df = max(2.1, min(df, 30))  # 限制df在合理范围
+            except Exception:
+                df = 5.0  # 默认值
 
-            aic = 2 * 1 - 2 * log_likelihood
-            bic = aic  # 单参数模型
+            # 使用t分布计算对数似然
+            log_likelihood = np.sum(stats.t.logpdf(std_resid, df))
 
-        self.models['EWMA'] = {'volatility': ewma_volatility, 'lambda': lambda_param}
+            # EWMA有2个参数: lambda 和 t分布自由度df
+            aic = 2 * 2 - 2 * log_likelihood
+            bic = np.log(valid_count) * 2 - 2 * log_likelihood
+
+        self.models['EWMA'] = {'volatility': ewma_volatility, 'lambda': lambda_param, 'df': df if valid_count >= 10 else 5.0}
         self.ic_scores['EWMA'] = {'AIC': aic, 'BIC': bic}
 
         print(f"   λ = {lambda_param} (RiskMetrics 标准)")
+        if valid_count >= 10:
+            print(f"   t分布自由度 df = {df:.2f} (P0修复: 与GARCH使用相同分布)")
         print(f"   AIC={aic:.2f}, BIC={bic:.2f}")
         print(f"   当前波动率: {volatility[-1]:.4f}")
 

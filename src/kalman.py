@@ -58,7 +58,10 @@ class KalmanSignalExtractor:
             self.success = True
 
             print("✓ Kalman Filter 拟合成功")
-            print(f"  观测噪音标准差 σ_ε ≈ {np.sqrt(result.params['sigma2']):.2f} bps")
+            # P0修复: SARIMAX(order=(0,1,0))的sigma2是状态转移误差方差(σ_η²)，非观测误差(σ_ε²)
+            # 参考: Hamilton (1994) Time Series Analysis, Chapter 13
+            print(f"  状态转移噪音标准差 σ_η ≈ {np.sqrt(result.params['sigma2']):.2f} bps")
+            # 注: 真实观测噪音需要检查 result.filter_results.obs_cov
 
         except Exception as e:
             print(f"⚠️  Kalman Filter 优化失败: {str(e)}")
@@ -79,17 +82,48 @@ class KalmanSignalExtractor:
         这个指标可以用来构建均值回归策略:
         - deviation > +1.5σ → 利差高估，做空信号（预期收窄）
         - deviation < -1.5σ → 利差低估，做多信号（预期扩大）
+
+        P0修复: 使用标准化创新(standardized innovation)而非残差样本标准差
+        标准化创新 = (观测值 - 预测值) / 预测误差标准差
+        这是Kalman滤波理论中正确的标准化方法，提供了时变的不确定性估计
         """
         if self.smoothed_state is None:
             raise ValueError("请先调用 fit()")
 
-        deviation = self.spread - self.smoothed_state
-        std = deviation.std()
+        try:
+            # 尝试获取Kalman滤波器的标准化创新
+            # 标准化创新 = one-step-ahead prediction error / sqrt(prediction error variance)
+            model = SARIMAX(self.spread, order=(0, 1, 0), trend=None)
+            result = model.fit(disp=False, method='bfgs', maxiter=500)
 
-        # 添加保护，防止除以接近零的标准差
-        if std < 1e-6:
-            std = 1e-6
+            # 获取标准化创新（时变的Z-score）
+            # standardized_forecasts_error 已经被预测误差标准差标准化
+            innovation = result.filter_results.standardized_forecasts_error[0]
 
-        normalized_deviation = deviation / std
+            # 对齐索引（可能比原始数据少一个，因为差分）
+            if len(innovation) == len(self.spread) - 1:
+                # 差分模型，第一个观测值没有预测误差
+                normalized_deviation = pd.Series(innovation, index=self.spread.index[1:])
+                # 第一个值用残差方法填充
+                first_dev = (self.spread.iloc[0] - self.smoothed_state.iloc[0]) / (self.spread - self.smoothed_state).std()
+                normalized_deviation = pd.concat([
+                    pd.Series([first_dev], index=[self.spread.index[0]]),
+                    normalized_deviation
+                ])
+            else:
+                normalized_deviation = pd.Series(innovation, index=self.spread.index)
 
-        return normalized_deviation
+            return normalized_deviation
+
+        except Exception:
+            # Fallback: 使用残差标准差（保留原有逻辑作为后备）
+            deviation = self.spread - self.smoothed_state
+            std = deviation.std()
+
+            # 添加保护，防止除以接近零的标准差
+            if std < 1e-6:
+                std = 1e-6
+
+            normalized_deviation = deviation / std
+
+            return normalized_deviation

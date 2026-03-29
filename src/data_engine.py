@@ -110,6 +110,7 @@ class DataEngine:
         spread[0] = 100  # 初始利差 100 bps
         volatility = np.zeros(n)
         volatility[0] = 10
+        shocks = np.zeros(n)  # P0修复: 保存残差用于GARCH更新
 
         # 这些参数是根据实际地方债市场经验设定的：
         # - phi = 0.98: 高度持久性（地方债利差是慢变量）
@@ -122,12 +123,15 @@ class DataEngine:
         beta = 0.80  # GARCH 效应
 
         for t in range(1, n):
-            # GARCH(1,1) 波动率更新
-            volatility[t] = np.sqrt(omega + alpha * (spread[t-1] - mu)**2 + beta * volatility[t-1]**2)
+            # P0修复: GARCH(1,1) 波动率更新使用上一步的残差(epsilon)
+            # 正确公式: sigma_t^2 = omega + alpha * epsilon_{t-1}^2 + beta * sigma_{t-1}^2
+            # epsilon_{t-1} 是 AR(1) 过程的真实残差，即 shocks[t-1]
+            volatility[t] = np.sqrt(omega + alpha * shocks[t-1]**2 + beta * volatility[t-1]**2)
 
             # AR(1) 过程 + 随机冲击
             shock = np.random.standard_t(df=5) * volatility[t]  # 使用 t 分布制造肥尾
             spread[t] = mu + phi * (spread[t-1] - mu) + shock
+            shocks[t] = shock  # 保存当前残差供下一步GARCH更新使用
 
             # 偶尔添加跳跃（模拟政策冲击或信用事件）
             if np.random.rand() < 0.01:  # 1% 概率发生跳跃
