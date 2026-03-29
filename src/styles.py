@@ -313,43 +313,55 @@ MODERN_DARK_THEME = """
 """
 
 # ============================================================================
-# 浅色主题 (专业简洁风格)
+# 浅色主题 (专业简洁风格 - 灰蓝配色)
 # ============================================================================
 
 MODERN_LIGHT_THEME = """
 <style>
     :root {
-        --primary: #2563EB;
-        --primary-light: #3B82F6;
-        --secondary: #7C3AED;
-        --accent: #0891B2;
-        --success: #059669;
-        --warning: #D97706;
-        --danger: #DC2626;
-        --bg-main: #FFFFFF;
+        --primary: #475569;
+        --primary-light: #64748B;
+        --secondary: #6366F1;
+        --accent: #0EA5E9;
+        --success: #10B981;
+        --warning: #F59E0B;
+        --danger: #EF4444;
+        --bg-main: #F8FAFC;
         --bg-card: #FFFFFF;
-        --bg-secondary: #F8FAFC;
-        --text-primary: #0F172A;
+        --bg-secondary: #F1F5F9;
+        --text-primary: #1E293B;
         --text-secondary: #475569;
-        --text-muted: #94A3B8;
+        --text-muted: #64748B;
         --border-color: #E2E8F0;
-        --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
     }
 
+    /* 全局文字颜色 - 强制覆盖 */
+    .stApp, .stApp * {
+        color: var(--text-primary) !important;
+    }
+
+    /* 主背景 */
     .stApp {
-        background: #FFFFFF;
+        background: #F8FAFC;
     }
 
+    /* 所有段落和文字 */
+    p, span, div, label, li, td, th {
+        color: var(--text-primary) !important;
+    }
+
+    /* Plotly 图表透明背景 */
     .js-plotly-plot .plotly .bg {
         fill: transparent !important;
     }
 
-    /* Tab导航 - 简洁风格 */
+    /* Tab导航 */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 2px;
-        background: #F1F5F9;
-        padding: 4px;
-        border-radius: 10px;
+        gap: 4px;
+        background: #E2E8F0;
+        padding: 6px;
+        border-radius: 12px;
         margin-bottom: 16px;
     }
 
@@ -357,135 +369,144 @@ MODERN_LIGHT_THEME = """
         border-radius: 8px;
         padding: 10px 18px;
         font-weight: 500;
-        color: var(--text-secondary);
+        color: var(--text-secondary) !important;
         background: transparent;
         border: none;
     }
 
     .stTabs [data-baseweb="tab"]:hover {
-        background: rgba(37, 99, 235, 0.08);
-        color: var(--primary);
+        background: rgba(255, 255, 255, 0.6);
+        color: var(--text-primary) !important;
     }
 
     .stTabs [aria-selected="true"] {
         background: #FFFFFF;
-        color: var(--primary) !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        color: var(--text-primary) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         font-weight: 600;
     }
 
-    /* Metric卡片 - 干净简洁 */
+    /* Metric卡片 */
     .stMetric {
-        background: #FAFBFC;
-        border: 1px solid #E2E8F0;
-        border-radius: 10px;
+        background: #FFFFFF;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
         padding: 14px;
-        box-shadow: none;
-        transition: all 0.2s ease;
-    }
-
-    .stMetric:hover {
-        border-color: var(--primary);
-        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
 
     div[data-testid="stMetricValue"] {
         font-size: 1.6rem;
         font-weight: 700;
-        color: var(--text-primary);
+        color: var(--text-primary) !important;
     }
 
     div[data-testid="stMetricLabel"] {
         font-size: 0.8rem;
-        color: var(--text-secondary);
+        color: var(--text-secondary) !important;
         font-weight: 500;
     }
 
-    /* 标题 - 专业蓝 */
+    /* 标题 */
     .main-title {
         font-size: 1.9rem;
         font-weight: 700;
-        color: var(--primary);
+        color: var(--text-primary) !important;
         margin-bottom: 0.2rem;
     }
 
     .sub-title {
         font-size: 0.9rem;
-        color: var(--text-secondary);
+        color: var(--text-secondary) !important;
         margin-bottom: 0.75rem;
     }
 
-    .section-title {
-        font-size: 1.05rem;
-        font-weight: 600;
-        color: var(--text-primary);
-        margin: 0.5rem 0;
-        padding-bottom: 0.4rem;
-        border-bottom: 2px solid #E2E8F0;
+    /* st.info 框 - 重要！ */
+    div[data-testid="stAlert"] {
+        background: #EFF6FF !important;
+        color: var(--text-primary) !important;
+        border: 1px solid #BFDBFE;
     }
 
-    /* 预警样式 - 柔和配色 */
+    div[data-testid="stAlert"] p,
+    div[data-testid="stAlert"] span,
+    div[data-testid="stAlert"] div {
+        color: var(--text-primary) !important;
+    }
+
+    /* st.warning 框 */
+    div[data-testid="stAlert"][kind="warning"] {
+        background: #FFFBEB !important;
+        border: 1px solid #FDE68A;
+    }
+
+    /* 预警样式 */
     .alert-danger {
         background: #FEF2F2;
-        border-left: 3px solid var(--danger);
-        padding: 10px 14px;
-        border-radius: 0 8px 8px 0;
-        margin: 6px 0;
-        color: #B91C1C;
+        border-left: 3px solid #EF4444;
+        padding: 12px 16px;
+        border-radius: 0 10px 10px 0;
+        margin: 8px 0;
+        color: #B91C1C !important;
         font-size: 0.9rem;
     }
 
     .alert-warning {
         background: #FFFBEB;
-        border-left: 3px solid var(--warning);
-        padding: 10px 14px;
-        border-radius: 0 8px 8px 0;
-        margin: 6px 0;
-        color: #B45309;
+        border-left: 3px solid #F59E0B;
+        padding: 12px 16px;
+        border-radius: 0 10px 10px 0;
+        margin: 8px 0;
+        color: #B45309 !important;
         font-size: 0.9rem;
     }
 
     .alert-success {
         background: #ECFDF5;
-        border-left: 3px solid var(--success);
-        padding: 10px 14px;
-        border-radius: 0 8px 8px 0;
-        margin: 6px 0;
-        color: #047857;
+        border-left: 3px solid #10B981;
+        padding: 12px 16px;
+        border-radius: 0 10px 10px 0;
+        margin: 8px 0;
+        color: #047857 !important;
         font-size: 0.9rem;
     }
 
     .alert-info {
         background: #EFF6FF;
-        border-left: 3px solid var(--primary);
-        padding: 10px 14px;
-        border-radius: 0 8px 8px 0;
-        margin: 6px 0;
-        color: #1D4ED8;
+        border-left: 3px solid #3B82F6;
+        padding: 12px 16px;
+        border-radius: 0 10px 10px 0;
+        margin: 8px 0;
+        color: #1E40AF !important;
         font-size: 0.9rem;
     }
 
     /* 侧边栏 */
     section[data-testid="stSidebar"] {
-        background: #FAFBFC;
+        background: #FFFFFF;
         border-right: 1px solid var(--border-color);
+    }
+
+    section[data-testid="stSidebar"] * {
+        color: var(--text-primary) !important;
     }
 
     /* 按钮 */
     .stButton button[kind="primary"] {
-        background: var(--primary);
+        background: var(--text-primary);
         border: none;
         border-radius: 8px;
         font-weight: 600;
+        color: #FFFFFF !important;
     }
 
     .stButton button[kind="primary"]:hover {
-        background: #1D4ED8;
+        background: #334155;
     }
 
     /* 数据表格 */
     .stDataFrame {
-        border-radius: 8px;
+        border-radius: 10px;
         overflow: hidden;
         border: 1px solid var(--border-color);
     }
@@ -500,50 +521,95 @@ MODERN_LIGHT_THEME = """
         font-weight: 600;
     }
 
+    .stDataFrame tbody td {
+        color: var(--text-primary) !important;
+    }
+
     /* 页脚 */
     .footer {
         text-align: center;
         padding: 1rem;
-        color: var(--text-muted);
+        color: var(--text-muted) !important;
         font-size: 0.85rem;
         border-top: 1px solid var(--border-color);
         margin-top: 1.5rem;
     }
 
     .footer a {
-        color: var(--primary);
+        color: var(--text-secondary) !important;
         text-decoration: none;
-    }
-
-    .footer a:hover {
-        text-decoration: underline;
     }
 
     /* Expander */
     .streamlit-expanderHeader {
         background: #F8FAFC;
         border-radius: 8px;
-        color: var(--text-primary);
+        color: var(--text-primary) !important;
         border: 1px solid var(--border-color);
+    }
+
+    .streamlit-expanderContent {
+        background: #FFFFFF;
+        border: 1px solid var(--border-color);
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+        padding: 16px;
+    }
+
+    .streamlit-expanderContent * {
+        color: var(--text-primary) !important;
     }
 
     /* 输入控件 */
     .stTextInput input, .stSelectbox select, .stNumberInput input {
         background: #FFFFFF;
-        color: var(--text-primary);
+        color: var(--text-primary) !important;
         border: 1px solid var(--border-color);
         border-radius: 8px;
     }
 
-    .stTextInput input:focus, .stSelectbox select:focus {
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    .stTextInput input::placeholder {
+        color: var(--text-muted) !important;
+    }
+
+    .stTextInput label, .stSelectbox label, .stNumberInput label {
+        color: var(--text-primary) !important;
+    }
+
+    /* 滑块 */
+    .stSlider label {
+        color: var(--text-primary) !important;
     }
 
     /* 分隔线 */
     hr {
         border-color: var(--border-color);
-        margin: 10px 0;
+        margin: 12px 0;
+    }
+
+    /* Markdown 内容 */
+    .stMarkdown, .stMarkdown * {
+        color: var(--text-primary) !important;
+    }
+
+    /* 折叠面板 */
+    details summary {
+        color: var(--text-primary) !important;
+    }
+
+    details * {
+        color: var(--text-primary) !important;
+    }
+
+    /* 下载按钮 */
+    .stDownloadButton button {
+        background: var(--text-primary);
+        color: #FFFFFF !important;
+    }
+
+    /* Toggle 开关 */
+    .stToggle label {
+        color: var(--text-primary) !important;
     }
 </style>
 """
@@ -608,13 +674,14 @@ def apply_theme(theme='dark'):
 
 
 def get_theme_toggle():
-    """创建主题切换按钮"""
+    """创建主题切换按钮 - 默认深色主题"""
     if 'theme' not in st.session_state:
         st.session_state.theme = 'dark'  # 默认深色主题
 
     col1, col2, col3 = st.columns([2, 1, 1])
     with col3:
-        is_light = st.toggle("☀️ 浅色", value=(st.session_state.theme == 'light'))
+        # 默认 is_light = False (深色)
+        is_light = st.toggle("☀️ 浅色模式", value=(st.session_state.theme == 'light'))
 
     theme = 'light' if is_light else 'dark'
     st.session_state.theme = theme

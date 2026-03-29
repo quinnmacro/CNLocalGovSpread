@@ -3,7 +3,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
-![Version](https://img.shields.io/badge/Version-2.0.0-brightgreen.svg)
+![Version](https://img.shields.io/badge/Version-2.3.0-brightgreen.svg)
 
 **Author: Quinn Liu**
 
@@ -33,11 +33,16 @@ Quinn Liu is a senior fixed income investment professional with 8+ years of expe
 2. **卡尔曼滤波器** - 从市场噪音中提取真实信号
 3. **极值理论 (EVT)** - 基于 GPD 的尾部风险量化
 
-✅ **交互式Dashboard** - Streamlit 现代化仪表板 (v2.0新增)
+✅ **交互式Dashboard** - Streamlit 现代化仪表板 (v2.3新增)
 - 深色/浅色双主题切换
 - 情景分析（压力测试、蒙特卡洛模拟）
 - 风险预警系统
 - 报告生成中心（PDF/Excel/HTML）
+- **计量经济学教育内容** (v2.3新增)
+  - 模型理论解释（Kalman/GARCH/EVT）
+  - 指标解读指南
+  - 交易建议模板
+  - 市场背景故事
 
 ✅ **交互式可视化** - 使用 Plotly 生成专业图表（中文标注）
 
@@ -60,8 +65,9 @@ CNLocalGovSpread/
 │   ├── scenarios.py              # 情景分析模块 (v2.0)
 │   ├── alerts.py                 # 风险预警系统 (v2.0)
 │   ├── report_gen.py             # 报告生成中心 (v2.0)
+│   ├── content.py                # 计量经济学教育内容 (v2.3)
 │   └── report.py                 # 战略报告生成
-├── dashboard.py                  # Streamlit仪表板 (v2.0)
+├── dashboard.py                  # Streamlit仪表板 (v2.3)
 ├── notebooks/
 │   └── analysis.ipynb            # 主分析Notebook
 ├── tests/
