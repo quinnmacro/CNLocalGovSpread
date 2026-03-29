@@ -34,9 +34,9 @@ scikit-learn>=0.24.0        # For additional statistical tools (optional)
 #                # 或从 Wind 官网下载安装包
 
 # ============================================================================
-# Development Tools (可选)
+# Development Tools
 # ============================================================================
-# pytest>=6.2.0              # Unit testing
+pytest>=6.2.0              # Unit testing
 # black>=21.0                # Code formatting
 # flake8>=3.9.0              # Code linting
 # jupyter-contrib-nbextensions  # Notebook extensions
