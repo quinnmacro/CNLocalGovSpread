@@ -1,6 +1,16 @@
 """
 中国地方债利差分析仪表板
-Streamlit 现代化版本
+Streamlit 现代化版本 v2.0
+
+功能模块:
+1. 首页仪表板 - 关键指标与风险预警
+2. 信号分析 - 卡尔曼滤波信号提取
+3. 波动率分析 - GARCH模型锦标赛
+4. 风险分析 - 极值理论VaR/ES
+5. 情景分析 - 压力测试与蒙特卡洛模拟
+6. 历史回溯 - 滚动统计与事件检测
+7. 风险预警 - 实时预警系统
+8. 报告中心 - 多格式报告生成
 
 运行方式: streamlit run dashboard.py
 """
@@ -22,9 +32,48 @@ from visualization import (
     plot_signal_trend,
     plot_volatility_structure,
     plot_tail_risk,
+    print_var_comparison,
     plot_multi_tenor_spread,
     plot_tenor_spread_correlation,
     plot_tenor_spread_statistics
+)
+from styles import (
+    apply_theme,
+    get_theme_toggle,
+    metric_card,
+    alert_box,
+    section_header,
+    render_page_header,
+    render_footer
+)
+from scenarios import (
+    run_stress_test,
+    run_multi_scenario_stress,
+    run_monte_carlo,
+    plot_mc_simulation,
+    plot_mc_paths,
+    run_sensitivity_analysis,
+    plot_sensitivity_analysis,
+    calculate_rolling_stats,
+    detect_historical_events,
+    plot_rolling_stats,
+    plot_percentile_chart
+)
+from alerts import (
+    check_risk_alerts,
+    get_risk_score,
+    generate_alert_history,
+    plot_risk_gauge,
+    plot_risk_summary,
+    plot_alert_timeline,
+    get_alert_summary,
+    format_alert_message
+)
+from report_gen import (
+    ReportGenerator,
+    generate_report,
+    get_report_history,
+    generate_quick_report
 )
 from export import export_to_excel
 
@@ -32,7 +81,7 @@ from export import export_to_excel
 # 工具函数
 # ============================================================================
 
-def safe_format(value, unit="", decimals=2):
+def safe_format(value, unit="", decimals=4):
     """安全格式化数值，处理 inf/nan/极端值"""
     if value is None:
         return "N/A"
@@ -68,43 +117,15 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 自定义CSS样式
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #1E3A5F;
-        margin-bottom: 0.5rem;
-    }
-    .sub-header {
-        font-size: 1.1rem;
-        color: #666;
-        margin-bottom: 1.5rem;
-    }
-    .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1rem;
-        border-radius: 10px;
-        color: white;
-    }
-    .stMetric > label {
-        font-size: 0.9rem;
-        color: #666;
-    }
-    .stMetric > div {
-        font-size: 1.5rem;
-        font-weight: 600;
-    }
-    div[data-testid="stMetricValue"] {
-        font-size: 1.8rem;
-    }
-</style>
-""", unsafe_allow_html=True)
+# 主题切换
+theme = get_theme_toggle()
+apply_theme(theme)
 
-# 标题
-st.markdown('<p class="main-header">📊 中国地方政府债券利差分析</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Advanced Econometric Framework for China Local Government Bond Spread</p>', unsafe_allow_html=True)
+# 页面标题
+render_page_header(
+    "📊 中国地方政府债券利差分析",
+    "Advanced Econometric Framework for China Local Government Bond Spread"
+)
 
 # ============================================================================
 # 侧边栏配置
@@ -183,6 +204,10 @@ with st.sidebar:
 # 主分析逻辑
 # ============================================================================
 
+# 初始化 session state
+if 'analysis_done' not in st.session_state:
+    st.session_state.analysis_done = False
+
 if run_analysis:
     # 创建配置
     config = {
@@ -206,15 +231,84 @@ if run_analysis:
             engine.load_data()
             clean_data = engine.clean_data()
             returns = engine.get_returns()
+            st.session_state.clean_data = clean_data
+            st.session_state.returns = returns
+            st.session_state.config = config
             st.success(f"✓ 数据加载完成: {len(clean_data)} 个交易日")
         except Exception as e:
             st.error(f"数据加载失败: {str(e)}")
             st.stop()
 
-    # 数据概览卡片
+    # 卡尔曼滤波
+    with st.spinner("拟合卡尔曼滤波..."):
+        try:
+            kalman = KalmanSignalExtractor(clean_data['spread'])
+            smoothed = kalman.fit()
+            deviation = kalman.get_signal_deviation()
+            st.session_state.kalman = kalman
+            st.session_state.smoothed = smoothed
+            st.session_state.deviation = deviation
+        except Exception as e:
+            st.error(f"卡尔曼滤波拟合失败: {str(e)}")
+            st.stop()
+
+    # 波动率建模
+    with st.spinner("运行GARCH锦标赛..."):
+        try:
+            vol_modeler = VolatilityModeler(returns)
+            winner = vol_modeler.run_tournament()
+            winner_vol = vol_modeler.get_conditional_volatility(winner)
+            st.session_state.vol_modeler = vol_modeler
+            st.session_state.winner = winner
+            st.session_state.winner_vol = winner_vol
+        except Exception as e:
+            st.error(f"波动率建模失败: {str(e)}")
+            st.stop()
+
+    # EVT分析
+    with st.spinner("拟合EVT模型..."):
+        try:
+            evt = EVTRiskAnalyzer(
+                returns,
+                threshold_percentile=evt_threshold,
+                confidence=var_confidence
+            )
+            evt.fit_gpd()
+            var = evt.calculate_var()
+            es = evt.calculate_es()
+            st.session_state.evt = evt
+            st.session_state.var = var
+            st.session_state.es = es
+        except Exception as e:
+            st.warning(f"EVT分析失败: {str(e)}")
+            st.session_state.evt = None
+            st.session_state.var = returns.quantile(var_confidence)
+            st.session_state.es = returns.quantile(0.999)
+
+    st.session_state.analysis_done = True
+
+# 如果分析完成，显示仪表板
+if st.session_state.analysis_done:
+    clean_data = st.session_state.clean_data
+    returns = st.session_state.returns
+    kalman = st.session_state.kalman
+    smoothed = st.session_state.smoothed
+    deviation = st.session_state.deviation
+    vol_modeler = st.session_state.vol_modeler
+    winner = st.session_state.winner
+    winner_vol = st.session_state.winner_vol
+    evt = st.session_state.evt
+    var = st.session_state.var
+    es = st.session_state.es
+
     current_spread = clean_data['spread'].iloc[-1]
     spread_mean = clean_data['spread'].mean()
     spread_std = clean_data['spread'].std()
+
+    # =========================================================================
+    # 首页仪表板
+    # =========================================================================
+    section_header("📈 关键指标概览", "📊")
 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -222,38 +316,51 @@ if run_analysis:
     with col2:
         safe_metric("历史均值", spread_mean, "", "全样本平均")
     with col3:
-        safe_metric("历史标准差", spread_std, "", "波动程度")
+        current_vol = winner_vol.iloc[-1] if winner_vol is not None else None
+        safe_metric("当前波动率", current_vol, "", f"{winner}模型")
     with col4:
-        spread_range = clean_data['spread'].max() - clean_data['spread'].min()
-        safe_metric("利差区间", spread_range, "", "最大值-最小值")
+        safe_metric(f"{var_confidence*100:.0f}% VaR", var, "", "单日最大风险")
 
+    # 风险预警面板
     st.divider()
+    section_header("⚠️ 风险预警", "🔔")
 
-    # Tabs
-    tab1, tab2, tab3, tab4 = st.tabs([
+    alerts = check_risk_alerts(clean_data, returns, evt, vol_modeler)
+    risk_score = get_risk_score(alerts)
+
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.plotly_chart(plot_risk_gauge(risk_score, theme), use_container_width=True)
+    with col2:
+        st.plotly_chart(plot_risk_summary(alerts, theme), use_container_width=True)
+
+    # 预警详情
+    with st.expander("📋 预警详情", expanded=True):
+        for alert in alerts:
+            alert_box(alert['message'], alert['level'])
+
+    # =========================================================================
+    # Tabs 导航
+    # =========================================================================
+    st.divider()
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📈 信号分析",
         "📉 波动率分析",
         "⚠️ 风险分析",
-        "📊 多期限对比"
+        "🎯 情景分析",
+        "📜 历史回溯",
+        "🔔 风险预警",
+        "📋 报告中心"
     ])
 
     # =========================================================================
     # Tab 1: 信号分析
     # =========================================================================
     with tab1:
-        st.subheader("卡尔曼滤波信号提取")
-
-        with st.spinner("拟合卡尔曼滤波..."):
-            try:
-                kalman = KalmanSignalExtractor(clean_data['spread'])
-                smoothed = kalman.fit()
-                deviation = kalman.get_signal_deviation()
-            except Exception as e:
-                st.error(f"卡尔曼滤波拟合失败: {str(e)}")
-                st.stop()
+        section_header("卡尔曼滤波信号提取", "📈")
 
         # 信号图
-        fig1 = plot_signal_trend(clean_data, smoothed, deviation)
+        fig1 = plot_signal_trend(clean_data, smoothed, deviation, theme)
         st.plotly_chart(fig1, use_container_width=True)
 
         # 信号指标
@@ -280,31 +387,22 @@ if run_analysis:
         dev_val = deviation.iloc[-1]
         if not np.isnan(dev_val) and not np.isinf(dev_val):
             if dev_val > 1.5:
-                st.warning(f"🔴 **做空信号**: 利差高估 {dev_val:.2f}σ，预期收窄")
+                alert_box(f"**做空信号**: 利差高估 {dev_val:.2f}σ，预期收窄", "danger")
             elif dev_val < -1.5:
-                st.success(f"🟢 **做多信号**: 利差低估 {dev_val:.2f}σ，预期扩大")
+                alert_box(f"**做多信号**: 利差低估 {dev_val:.2f}σ，预期扩大", "success")
             else:
-                st.info(f"🟡 **中性**: 利差在合理区间，偏离度 {dev_val:.2f}σ")
+                alert_box(f"**中性**: 利差在合理区间，偏离度 {dev_val:.2f}σ", "info")
         else:
-            st.info("⚪ 数据平稳，无明显交易信号")
+            alert_box("数据平稳，无明显交易信号", "info")
 
     # =========================================================================
     # Tab 2: 波动率分析
     # =========================================================================
     with tab2:
-        st.subheader("GARCH模型锦标赛")
-
-        with st.spinner("运行GARCH锦标赛..."):
-            try:
-                vol_modeler = VolatilityModeler(returns)
-                winner = vol_modeler.run_tournament()
-                winner_vol = vol_modeler.get_conditional_volatility(winner)
-            except Exception as e:
-                st.error(f"波动率建模失败: {str(e)}")
-                st.stop()
+        section_header("GARCH模型锦标赛", "📉")
 
         # 波动率图
-        fig2 = plot_volatility_structure(winner_vol, winner)
+        fig2 = plot_volatility_structure(winner_vol, winner, theme)
         st.plotly_chart(fig2, use_container_width=True)
 
         # 波动率指标
@@ -324,7 +422,7 @@ if run_analysis:
             else:
                 st.metric("平均波动率", "N/A")
 
-        # 状态切换（仅在数据足够时）
+        # 状态切换
         st.subheader("波动率状态切换")
         try:
             with st.spinner("检测波动率状态..."):
@@ -353,27 +451,11 @@ if run_analysis:
     # Tab 3: 风险分析
     # =========================================================================
     with tab3:
-        st.subheader("极值理论(EVT)风险分析")
-
-        with st.spinner("拟合EVT模型..."):
-            try:
-                evt = EVTRiskAnalyzer(
-                    returns,
-                    threshold_percentile=evt_threshold,
-                    confidence=var_confidence
-                )
-                evt.fit_gpd()
-                var = evt.calculate_var()
-                es = evt.calculate_es()
-            except Exception as e:
-                st.error(f"EVT分析失败: {str(e)}")
-                var = returns.quantile(var_confidence)
-                es = returns.quantile(0.999)
-                st.warning(f"已回退到经验分位数方法")
+        section_header("极值理论(EVT)风险分析", "⚠️")
 
         # 尾部风险图
         try:
-            fig3, evt_var_out, empirical_var = plot_tail_risk(returns, var, var_confidence)
+            fig3, evt_var_out, empirical_var = plot_tail_risk(returns, var, var_confidence, theme)
             st.plotly_chart(fig3, use_container_width=True)
         except Exception as e:
             st.warning(f"图表生成失败: {str(e)}")
@@ -391,106 +473,193 @@ if run_analysis:
             else:
                 st.metric("尾部指数", "N/A")
 
-        # Hill估计量（可选）
-        try:
-            with st.spinner("计算Hill估计量..."):
-                hill_index = evt.estimate_hill()
-
-            if evt.hill_estimator and evt.gpd_params:
-                st.markdown("#### 参数对比")
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.write(f"**GPD形状参数 ξ**: {evt.gpd_params['shape']:.4f}")
-                with col2:
-                    st.write(f"**Hill形状参数 ξ**: {evt.hill_estimator['shape']:.4f}")
-        except:
-            pass
+        # VaR 对比分析
+        st.markdown("#### VaR 对比分析")
+        print_var_comparison(evt_var_out, empirical_var)
 
     # =========================================================================
-    # Tab 4: 多期限对比
+    # Tab 4: 情景分析
     # =========================================================================
     with tab4:
-        st.subheader("多期限利差对比分析")
+        section_header("情景分析", "🎯")
 
-        if data_source != 'CSV':
-            st.warning("⚠️ 多期限分析仅支持 CSV 数据源")
+        # 压力测试
+        with st.container(border=True):
+            st.markdown("#### 📉 压力测试")
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                shock = st.slider("利差冲击", -100, 100, 10, 5, key="stress_shock")
+                stress_results = run_stress_test(returns, shock)
+            with col2:
+                st.metric("压力VaR", f"{stress_results['var']:.4f}")
+                st.metric("压力ES", f"{stress_results['es']:.4f}")
+                st.metric("最大损失", f"{stress_results['max_loss']:.4f}")
+
+        # 多情景压力测试
+        with st.container(border=True):
+            st.markdown("#### 📊 多情景压力测试")
+            multi_stress = run_multi_scenario_stress(returns)
+            stress_df = pd.DataFrame(multi_stress)
+            st.line_chart(stress_df.set_index('shock')[['var', 'es']])
+
+        # 蒙特卡洛模拟
+        with st.container(border=True):
+            st.markdown("#### 🎲 蒙特卡洛模拟")
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                n_sim = st.number_input("模拟次数", 1000, 100000, 10000, 1000, key="mc_nsim")
+                horizon = st.number_input("预测天数", 1, 252, 10, key="mc_horizon")
+                if st.button("运行模拟", key="run_mc"):
+                    st.session_state['mc_results'] = run_monte_carlo(returns, n_sim, horizon)
+            with col2:
+                if 'mc_results' in st.session_state:
+                    st.plotly_chart(plot_mc_simulation(st.session_state['mc_results'], theme), use_container_width=True)
+
+        # 敏感性分析
+        with st.container(border=True):
+            st.markdown("#### 📈 敏感性分析")
+            param = st.selectbox("参数", ["volatility", "mean", "df"], format_func=lambda x: {
+                'volatility': '波动率',
+                'mean': '均值',
+                'df': '自由度'
+            }.get(x, x), key="sens_param")
+            sens_results = run_sensitivity_analysis(returns, param)
+            st.plotly_chart(plot_sensitivity_analysis(sens_results, param, theme), use_container_width=True)
+
+    # =========================================================================
+    # Tab 5: 历史回溯
+    # =========================================================================
+    with tab5:
+        section_header("历史回溯分析", "📜")
+
+        # 滚动统计
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            window = st.selectbox("滚动窗口", [20, 60, 120, 252], index=1, key="rolling_window")
+        rolling_stats = calculate_rolling_stats(clean_data, window)
+        st.plotly_chart(plot_rolling_stats(rolling_stats, clean_data, theme), use_container_width=True)
+
+        # 历史分位数
+        st.plotly_chart(plot_percentile_chart(clean_data, theme=theme), use_container_width=True)
+
+        # 历史事件
+        st.markdown("#### 📌 历史重要事件")
+        events = detect_historical_events(clean_data)
+        if not events.empty:
+            st.dataframe(events, use_container_width=True, hide_index=True)
         else:
-            csv_path = config['CSV_PATH']
-            if not os.path.exists(csv_path):
-                st.error(f"数据文件不存在: {csv_path}")
+            st.info("暂无检测到的重要事件")
+
+    # =========================================================================
+    # Tab 6: 风险预警
+    # =========================================================================
+    with tab6:
+        section_header("风险预警系统", "🔔")
+
+        # 预警阈值设置
+        with st.expander("⚙️ 预警阈值设置"):
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                var_threshold = st.number_input("VaR预警阈值", 0.01, 0.10, 0.05, 0.01, key="alert_var")
+            with col2:
+                vol_percentile = st.slider("波动率预警百分位", 0.80, 0.99, 0.95, key="alert_vol")
+            with col3:
+                deviation_threshold = st.slider("偏离度预警阈值", 1.0, 3.0, 1.5, 0.1, key="alert_dev")
+
+            # 重新检查预警
+            if st.button("应用阈值", key="apply_thresholds"):
+                alerts = check_risk_alerts(
+                    clean_data, returns, evt, vol_modeler,
+                    var_threshold, vol_percentile, deviation_threshold
+                )
+                st.session_state['custom_alerts'] = alerts
+
+        # 当前预警状态
+        st.markdown("#### 📊 当前预警状态")
+        current_alerts = st.session_state.get('custom_alerts', alerts)
+        for alert in current_alerts:
+            alert_box(alert['message'], alert['level'])
+
+        # 预警历史
+        st.markdown("#### 📜 预警历史")
+        alert_history = generate_alert_history(clean_data, returns)
+        st.plotly_chart(plot_alert_timeline(alert_history, theme), use_container_width=True)
+
+    # =========================================================================
+    # Tab 7: 报告中心
+    # =========================================================================
+    with tab7:
+        section_header("报告生成中心", "📋")
+
+        # 报告配置
+        with st.container(border=True):
+            st.markdown("#### 📝 报告配置")
+            col1, col2 = st.columns(2)
+            with col1:
+                report_title = st.text_input("报告标题", "地方债利差分析报告", key="report_title")
+                report_format = st.selectbox("报告格式", ["HTML", "PDF", "Excel"], key="report_format")
+            with col2:
+                include_sections = st.multiselect(
+                    "包含章节",
+                    ["数据概览", "信号分析", "波动率分析", "风险分析", "交易建议"],
+                    default=["数据概览", "信号分析", "风险分析"],
+                    key="report_sections"
+                )
+
+        # 生成按钮
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📄 生成报告", type="primary", key="gen_report"):
+                with st.spinner("正在生成报告..."):
+                    try:
+                        report_path = generate_report(
+                            clean_data, returns, kalman, vol_modeler, evt,
+                            title=report_title,
+                            format=report_format,
+                            sections=include_sections
+                        )
+                        st.success(f"✓ 报告已生成: {report_path}")
+                        st.session_state['last_report'] = report_path
+                    except Exception as e:
+                        st.error(f"报告生成失败: {str(e)}")
+
+        with col2:
+            if st.button("⚡ 快速报告", key="quick_report"):
+                with st.spinner("正在生成快速报告..."):
+                    try:
+                        report_path = generate_quick_report(
+                            clean_data, returns, kalman, vol_modeler, evt
+                        )
+                        st.success(f"✓ 快速报告已生成: {report_path}")
+                        st.session_state['last_report'] = report_path
+                    except Exception as e:
+                        st.error(f"报告生成失败: {str(e)}")
+
+        # 下载报告
+        if 'last_report' in st.session_state and os.path.exists(st.session_state['last_report']):
+            with open(st.session_state['last_report'], "rb") as f:
+                st.download_button(
+                    "📥 下载报告",
+                    f,
+                    file_name=os.path.basename(st.session_state['last_report']),
+                    key="download_report"
+                )
+
+        # 历史报告
+        with st.container(border=True):
+            st.markdown("#### 📁 历史报告")
+            history = get_report_history()
+            if history is not None and not history.empty:
+                st.dataframe(history, use_container_width=True, hide_index=True)
             else:
-                multi_df = pd.read_csv(csv_path, parse_dates=['date'], index_col='date')
-
-                # 多期限趋势图
-                st.markdown("#### 各期限利差趋势")
-                fig_multi = plot_multi_tenor_spread(multi_df)
-                st.plotly_chart(fig_multi, use_container_width=True)
-
-                # 统计对比
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.markdown("#### 统计分布对比")
-                    fig_box = plot_tenor_spread_statistics(multi_df)
-                    st.plotly_chart(fig_box, use_container_width=True)
-
-                with col2:
-                    st.markdown("#### 相关性矩阵")
-                    fig_corr = plot_tenor_spread_correlation(multi_df)
-                    st.plotly_chart(fig_corr, use_container_width=True)
-
-                # 统计摘要表
-                st.markdown("#### 统计摘要")
-                col_names = {
-                    'spread_all': '综合利差',
-                    'spread_5y': '5年期',
-                    'spread_10y': '10年期',
-                    'spread_30y': '30年期'
-                }
-                summary_data = []
-                for col, name in col_names.items():
-                    if col in multi_df.columns:
-                        series = multi_df[col].dropna()
-                        summary_data.append({
-                            '期限': name,
-                            '均值': f"{series.mean():.4f}",
-                            '中位数': f"{series.median():.4f}",
-                            '标准差': f"{series.std():.4f}",
-                            '最小值': f"{series.min():.4f}",
-                            '最大值': f"{series.max():.4f}",
-                            '当前值': f"{series.iloc[-1]:.4f}"
-                        })
-                st.dataframe(pd.DataFrame(summary_data), use_container_width=True, hide_index=True)
-
-                # 期限结构分析
-                if all(c in multi_df.columns for c in ['spread_5y', 'spread_10y', 'spread_30y']):
-                    st.markdown("#### 期限结构分析")
-                    spread_10y_5y = multi_df['spread_10y'] - multi_df['spread_5y']
-                    spread_30y_10y = multi_df['spread_30y'] - multi_df['spread_10y']
-
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        safe_metric("10Y-5Y期限利差", spread_10y_5y.iloc[-1], "",
-                                   f"均值: {spread_10y_5y.mean():.4f}")
-                    with col2:
-                        safe_metric("30Y-10Y期限利差", spread_30y_10y.iloc[-1], "",
-                                   f"均值: {spread_30y_10y.mean():.4f}")
-
-                    if spread_10y_5y.iloc[-1] > spread_10y_5y.mean():
-                        st.info("📊 期限结构趋陡（长端利差扩大）")
-                    else:
-                        st.info("📊 期限结构趋平（长端利差收窄）")
+                st.info("暂无历史报告")
 
 # ============================================================================
 # 页脚
 # ============================================================================
-st.markdown("---")
-st.markdown("""
-<div style='text-align: center; padding: 1rem;'>
-    <small>
-        <strong>CNLocalGovSpread</strong> v1.3.0 |
-        Author: <a href='https://github.com/quinnmacro' target='_blank'>Quinn Liu</a> |
-        <a href='https://github.com/quinnmacro/CNLocalGovSpread' target='_blank'>GitHub</a> |
-        <a href='https://www.linkedin.com/in/liulu-math' target='_blank'>LinkedIn</a>
-    </small>
-</div>
-""", unsafe_allow_html=True)
+render_footer(
+    version='2.0.0',
+    author='Quinn Liu',
+    github='https://github.com/quinnmacro/CNLocalGovSpread',
+    linkedin='https://www.linkedin.com/in/liulu-math'
+)
