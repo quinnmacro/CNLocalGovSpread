@@ -13,10 +13,8 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
-import os
 import numpy as np
 import pandas as pd
-from datetime import datetime
 
 from src.export import export_to_excel
 

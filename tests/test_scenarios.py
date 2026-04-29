@@ -5,7 +5,6 @@
 import pytest
 import numpy as np
 import pandas as pd
-from datetime import datetime
 import sys
 import os
 import plotly.graph_objects as go
@@ -291,8 +290,8 @@ class TestRollingStats:
         """测试包含预期列"""
         result = calculate_rolling_stats(sample_data)
         expected_cols = ['rolling_mean', 'rolling_std', 'rolling_min', 'rolling_max',
-                        'rolling_range', 'rolling_q25', 'rolling_q75', 'rolling_iqr',
-                        'rolling_skew', 'rolling_kurt']
+                            'rolling_range', 'rolling_q25', 'rolling_q75', 'rolling_iqr',
+                            'rolling_skew', 'rolling_kurt']
         for col in expected_cols:
             assert col in result.columns
 

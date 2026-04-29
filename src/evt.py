@@ -111,9 +111,6 @@ class EVTRiskAnalyzer:
             self.var = self.returns.quantile(self.confidence)
             return self.var
 
-        # 超过阈值的概率
-        p_exceed = 1 - self.threshold_percentile
-
         # P0修复: 计算样本比例因子 n/N_u
         # 正确的EVT-VaR公式: VaR = u + (σ/ξ) * [((n/N_u) * (1-α))^(-ξ) - 1]
         # 其中 n 是总样本数，N_u 是超过阈值的样本数

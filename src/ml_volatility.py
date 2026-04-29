@@ -161,7 +161,6 @@ class MLVolatilityModeler:
         )
         model.fit(X_train, y_train)
 
-        y_pred_train = model.predict(X_train)
         y_pred_test = model.predict(X_test)
 
         # 评估指标

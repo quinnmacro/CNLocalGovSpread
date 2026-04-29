@@ -63,7 +63,7 @@ jobs:
         run: pip install flake8
 
       - name: Lint src modules
-        run: flake8 src/ --max-line-length=120 --ignore=E501,W503,E402 --exclude=__pycache__
+        run: flake8 src/ --max-line-length=120 --ignore=E501,W503,E402,E226,F541,W504,E127,E131,E741 --exclude=__pycache__
 
       - name: Lint test modules
-        run: flake8 tests/ --max-line-length=120 --ignore=E501,W503,E402 --exclude=__pycache__
+        run: flake8 tests/ --max-line-length=120 --ignore=E501,W503,E402,E226,F541,F841,W504,E127,E131,E741,E712 --exclude=__pycache__

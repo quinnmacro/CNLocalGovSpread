@@ -249,7 +249,7 @@ class VolatilityModeler:
 
         # arch库的结果对象提供参数汇总表
         try:
-            summary = result.summary()
+            result.summary()  # verify summary available
             # 提取参数名、估计值、标准误差、t统计量、p值
             params = result.params
             pvalues = result.pvalues

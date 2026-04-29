@@ -20,8 +20,7 @@ import numpy as np
 import pandas as pd
 import json
 import os
-from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
-from scipy.spatial.distance import pdist
+from scipy.cluster.hierarchy import linkage, fcluster
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 

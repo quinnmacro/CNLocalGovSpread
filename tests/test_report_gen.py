@@ -16,12 +16,10 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import pytest
-import os
 import json
 import numpy as np
 import pandas as pd
 from unittest.mock import MagicMock, patch
-from datetime import datetime
 
 from src.report_gen import (
     ReportGenerator,
@@ -631,7 +629,7 @@ class TestPPTGeneration:
 
     def test_ppt_format_generates_file(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
         try:
-            from pptx import Presentation
+            from pptx import Presentation  # noqa: F401
         except ImportError:
             pytest.skip("python-pptx not installed")
 
@@ -644,7 +642,7 @@ class TestPPTGeneration:
 
     def test_ppt_has_multiple_slides(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
         try:
-            from pptx import Presentation
+            from pptx import Presentation  # noqa: F401
         except ImportError:
             pytest.skip("python-pptx not installed")
 
@@ -658,7 +656,7 @@ class TestPPTGeneration:
 
     def test_ppt_title_slide_content(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
         try:
-            from pptx import Presentation
+            from pptx import Presentation  # noqa: F401
         except ImportError:
             pytest.skip("python-pptx not installed")
 
@@ -672,7 +670,7 @@ class TestPPTGeneration:
 
     def test_ppt_subtitle_has_version(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
         try:
-            from pptx import Presentation
+            from pptx import Presentation  # noqa: F401
         except ImportError:
             pytest.skip("python-pptx not installed")
 
@@ -686,7 +684,7 @@ class TestPPTGeneration:
 
     def test_ppt_disclaimer_slide(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
         try:
-            from pptx import Presentation
+            from pptx import Presentation  # noqa: F401
         except ImportError:
             pytest.skip("python-pptx not installed")
 
@@ -702,7 +700,7 @@ class TestPPTGeneration:
 
     def test_ppt_with_academic_template(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
         try:
-            from pptx import Presentation
+            from pptx import Presentation  # noqa: F401
         except ImportError:
             pytest.skip("python-pptx not installed")
 
@@ -716,7 +714,7 @@ class TestPPTGeneration:
 
     def test_ppt_executive_has_summary_slide(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
         try:
-            from pptx import Presentation
+            from pptx import Presentation  # noqa: F401
         except ImportError:
             pytest.skip("python-pptx not installed")
 
@@ -731,7 +729,7 @@ class TestPPTGeneration:
 
     def test_ppt_section_slide_content(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
         try:
-            from pptx import Presentation
+            from pptx import Presentation  # noqa: F401
         except ImportError:
             pytest.skip("python-pptx not installed")
 
@@ -758,7 +756,7 @@ class TestPPTGeneration:
 
     def test_ppt_history_records_format(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
         try:
-            from pptx import Presentation
+            from pptx import Presentation  # noqa: F401
         except ImportError:
             pytest.skip("python-pptx not installed")
 

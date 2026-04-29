@@ -9,11 +9,9 @@
 """
 
 import os
-import io
 import json
 from datetime import datetime
 import pandas as pd
-import numpy as np
 
 
 # ============================================================================
@@ -121,8 +119,8 @@ class ReportGenerator:
             json.dump(self.history, f, indent=2, ensure_ascii=False)
 
     def generate_report(self, clean_data, returns, kalman, vol_modeler, evt,
-                       title="地方债利差分析报告", format="PDF", sections=None,
-                       template='professional'):
+                            title="地方债利差分析报告", format="PDF", sections=None,
+                            template='professional'):
         """
         生成分析报告
 
@@ -546,9 +544,8 @@ class ReportGenerator:
         """生成PPT报告"""
         try:
             from pptx import Presentation
-            from pptx.util import Inches, Pt, Emu
+            from pptx.util import Inches, Pt
             from pptx.dml.color import RGBColor
-            from pptx.enum.text import PP_ALIGN
 
             tmpl = self.template
 
@@ -716,8 +713,8 @@ class ReportGenerator:
 # ============================================================================
 
 def generate_report(clean_data, returns, kalman, vol_modeler, evt,
-                   title="地方债利差分析报告", format="PDF", sections=None,
-                   template='professional'):
+                        title="地方债利差分析报告", format="PDF", sections=None,
+                        template='professional'):
     """
     生成分析报告的便捷函数
 

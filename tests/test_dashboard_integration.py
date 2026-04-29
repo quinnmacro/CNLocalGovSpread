@@ -14,9 +14,7 @@ Dashboard 集成测试 - 验证多页架构和模块集成
 import pytest
 import numpy as np
 import pandas as pd
-import sys
 import os
-import importlib
 
 # conftest.py 已配置 sys.path
 
@@ -52,6 +50,10 @@ class TestModuleImports:
             add_range_selector, get_theme_config
         )
         assert plot_signal_trend is not None
+        assert plot_volatility_structure is not None
+        assert plot_tail_risk is not None
+        assert add_range_selector is not None
+        assert get_theme_config is not None
 
     def test_import_styles(self):
         from styles import (
@@ -59,6 +61,11 @@ class TestModuleImports:
             apply_theme, render_page_header, render_footer
         )
         assert metric_card is not None
+        assert alert_box is not None
+        assert section_header is not None
+        assert apply_theme is not None
+        assert render_page_header is not None
+        assert render_footer is not None
 
     def test_import_scenarios(self):
         from scenarios import (
@@ -66,10 +73,14 @@ class TestModuleImports:
             run_sensitivity_analysis, calculate_rolling_stats
         )
         assert run_stress_test is not None
+        assert run_monte_carlo is not None
+        assert run_sensitivity_analysis is not None
+        assert calculate_rolling_stats is not None
 
     def test_import_alerts(self):
         from alerts import check_risk_alerts, get_risk_score
         assert check_risk_alerts is not None
+        assert get_risk_score is not None
 
     def test_import_content(self):
         from content import (
@@ -78,6 +89,8 @@ class TestModuleImports:
             get_var_comment
         )
         assert get_spread_position_comment is not None
+        assert get_volatility_comment is not None
+        assert get_var_comment is not None
 
     def test_import_export(self):
         from export import export_to_excel

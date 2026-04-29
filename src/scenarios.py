@@ -666,9 +666,6 @@ def plot_percentile_chart(data, windows=[20, 60, 120], theme='light'):
         q50 = recent.quantile(0.50)
         q75 = recent.quantile(0.75)
 
-        # 计算当前值在分位数中的位置
-        percentile = (recent < current).mean() * 100
-
         fig.add_trace(go.Bar(
             x=[f'{window}日'],
             y=[q75 - q25],

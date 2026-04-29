@@ -331,7 +331,7 @@ class TestCalibrateAll:
     def test_calibrate_all_populates_all_params(self, calibrator):
         calibrator.calibrate_all()
         expected_params = ['ewma_lambda', 't_df', 'ar_phi',
-                          'evt_threshold_percentile', 'signal_threshold']
+                                'evt_threshold_percentile', 'signal_threshold']
         for param in expected_params:
             assert param in calibrator.calibrated
 

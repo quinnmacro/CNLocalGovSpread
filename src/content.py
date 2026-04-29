@@ -362,6 +362,7 @@ TRADING_ADVICE = {
 # 渲染函数
 # ============================================================================
 
+
 def render_theory_expander(theory_dict, default_expanded=True):
     """渲染理论解释折叠面板 - 默认展开"""
     with st.expander(f"📖 {theory_dict['title']}", expanded=default_expanded):

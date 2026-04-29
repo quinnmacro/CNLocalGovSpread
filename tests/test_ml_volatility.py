@@ -79,7 +79,7 @@ class TestMLVolatilityModeler:
     def test_fit_xgboost_installed(self, sample_returns):
         """测试XGBoost拟合（如果已安装）"""
         try:
-            import xgboost
+            import xgboost  # noqa: F401
             modeler = MLVolatilityModeler(sample_returns)
             pred = modeler.fit_xgboost()
             assert 'XGBoost' in modeler.ic_scores
@@ -91,7 +91,7 @@ class TestMLVolatilityModeler:
         """测试XGBoost未安装时优雅降级"""
         # 如果XGBoost已安装则跳过
         try:
-            import xgboost
+            import xgboost  # noqa: F401
             pytest.skip("XGBoost已安装，此测试针对未安装场景")
         except ImportError:
             modeler = MLVolatilityModeler(sample_returns)
@@ -102,7 +102,7 @@ class TestMLVolatilityModeler:
     def test_fit_lstm_installed(self, sample_returns):
         """测试LSTM拟合（如果已安装）"""
         try:
-            import tensorflow
+            import tensorflow  # noqa: F401
             modeler = MLVolatilityModeler(sample_returns)
             pred = modeler.fit_lstm(epochs=5, batch_size=16)
             if pred is not None:
@@ -114,7 +114,7 @@ class TestMLVolatilityModeler:
     def test_fit_lstm_not_installed(self, sample_returns):
         """测试TensorFlow未安装时优雅降级"""
         try:
-            import tensorflow
+            import tensorflow  # noqa: F401
             pytest.skip("TensorFlow已安装，此测试针对未安装场景")
         except ImportError:
             modeler = MLVolatilityModeler(sample_returns)

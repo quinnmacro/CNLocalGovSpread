@@ -664,8 +664,6 @@ class MarketStatusGauge:
         # 计算滚动指标评分序列
         # 注意: returns 比 spread 少1行(diff), 需要按日期对齐
         spread_dates = spread.index[window:]
-        returns_aligned = returns.reindex(spread_dates)
-        spread_aligned = spread.reindex(spread_dates)
 
         # 利差定位 (滚动百分位)
         spread_scores = []
