@@ -29,10 +29,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **MarketStatusGauge module** (`src/market_status.py`): 5-indicator composite scoring system (spread position, volatility regime, VaR breach, signal deviation, trend momentum) with weighted fusion, 5-level status classification (safe/watch/caution/warning/danger), extreme indicator upgrade logic, and 3 Plotly visualizations (multi-segment gauge, radar linkage chart, rolling timeline)
 - **ProvinceClusterMap module** (`src/province_cluster.py`): 31-province hierarchical clustering using regional characteristic seeds (东部沿海/中部内陆/西部开发/东北老工业), 5-feature vectors, Ward/complete/average methods, and 3 Plotly visualizations (clustered heatmap, Scattergeo bubble map, cluster comparison radar chart)
 
-### Phase 3: Test Coverage
+- **EGARCH gamma check remnant bug in report.py**: Replaced misleading gamma[1] extraction (always 0 since arch EGARCH doesn't have that parameter) with proper logic that references GJR-GARCH results for explicit asymmetry measurement
 
 #### Added
-- **Expanded test suite from 17 tests to 274 tests** across 8 test files:
+- **PPT report generation and template system** (`src/report_gen.py`): Added PowerPoint report generation via python-pptx with title, section, executive summary (for executive template), and disclaimer slides. Added 3 report templates (professional/academic/executive) with distinct color schemes and styling parameters driving HTML/CSS and PDF/PPT formatting
+
+### Phase 2: Dashboard 2.0
+
+#### Changed
+- **Dashboard refactored into multi-page Streamlit architecture**: Split single 684-line dashboard.py into app.py home page, shared_state.py module for shared logic, and 6 individual page files in pages/ directory (信号分析, 波动率分析, 风险分析, 情景分析, 历史回溯, 报告中心)
+
+#### Added
+- **MarketStatusGauge module** (`src/market_status.py`): 5-indicator composite scoring system (spread position, volatility regime, VaR breach, signal deviation, trend momentum) with weighted fusion, 5-level status classification (safe/watch/caution/warning/danger), extreme indicator upgrade logic, and 3 Plotly visualizations (multi-segment gauge, radar linkage chart, rolling timeline)
+- **ProvinceClusterMap module** (`src/province_cluster.py`): 31-province hierarchical clustering using regional characteristic seeds (东部沿海/中部内陆/西部开发/东北老工业), 5-feature vectors, Ward/complete/average methods, and 3 Plotly visualizations (clustered heatmap, Scattergeo bubble map, cluster comparison radar chart)
+- **Report template selection**: 3 styles (professional/academic/executive) with color schemes and font sizes driving multi-format report generation
+
+### Phase 3: Test Coverage & Documentation
+
+#### Added
+- **Expanded test suite from 17 tests to 551 tests** across 15 test files:
   - `test_all.py` (17) - original core module tests
   - `test_ml_volatility.py` (15) - ML volatility module tests
   - `test_calibration.py` (39) - parameter calibration tests
@@ -41,11 +56,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `test_province_cluster.py` (43) - province clustering tests
   - `test_alerts.py` (37) - risk alerts system tests
   - `test_scenarios.py` (56) - scenario/stress analysis tests
+  - `test_visualization.py` (80) - Plotly visualization tests
+  - `test_report_gen.py` (46) - report generation tests (incl. PPT + templates)
+  - `test_content.py` (26) - content helper function tests
+  - `test_styles.py` (30) - Streamlit styles rendering tests
+  - `test_export.py` (16) - Excel export tests
+  - `test_dashboard_integration.py` (55) - dashboard integration tests
+  - `conftest.py` - shared pytest fixtures (15 factories + 3 mock fixtures + markers)
 
+- **CI-friendly test runner** (`run_tests.sh`) with 6 modes: all/quick/coverage/integration/dashboard/smoke/count
+- **reportlab dependency** added to requirements.txt for PDF generation
+- **python-pptx dependency** added to requirements.txt for PPT generation
 - **XGBoost dependency** added to requirements.txt (optional LSTM via commented tensorflow)
-- **Version unified** to 3.0.0 across all project files
+- **Version unified** to 3.0.0 across all project files (6 files: __init__.py, report_gen.py, styles.py, dashboard.py, shared_state.py, README badge)
 - **CHANGELOG.md** created for tracking project evolution
 - **README.md** updated with v3.0 features, new project structure, and module documentation
+- **Module exports completed** in __init__.py: all 50+ public API symbols (scenarios, alerts, styles, content, export modules) accessible via `from src import`
+
+#### Fixed
+- **Plotly Heatmap ColorBar titlefont bug**: Replaced deprecated titlefont parameter with title=dict(text=..., font=...) in visualization.py
+- **report_gen.py spread variable scope bug**: Moved spread definition to top of _prepare_report_data so it's available to all report sections
+- **5 test collection errors**: Corrected sys.path configuration in test files using 'from src.xxx import' pattern
+- **python-pptx MS_ANCHOR import**: Fixed ImportError in python-pptx v1.0.2 where MS_ANCHOR was removed from pptx.enum.text
 
 ---
 

@@ -52,7 +52,7 @@ Quinn Liu is a senior fixed income investment professional with 8+ years of expe
 - 深色/浅色双主题切换
 - 情景分析（压力测试、蒙特卡洛模拟）
 - 风险预警系统
-- 报告生成中心（PDF/Excel/HTML）
+- 报告生成中心（PDF/Excel/HTML/PPT + 3模板风格）
 - 计量经济学教育内容
 
 ✅ **交互式可视化** - 使用 Plotly 生成专业图表（中文标注）
@@ -96,6 +96,7 @@ CNLocalGovSpread/
 ├── notebooks/
 │   └── analysis.ipynb            # 主分析Notebook
 ├── tests/
+│   ├── conftest.py               # 共享pytest fixtures + markers
 │   ├── test_all.py               # 核心模块测试 (17)
 │   ├── test_ml_volatility.py     # ML波动率测试 (15)
 │   ├── test_calibration.py       # 参数校准测试 (39)
@@ -103,7 +104,14 @@ CNLocalGovSpread/
 │   ├── test_market_status.py     # 市场状态测试 (37)
 │   ├── test_province_cluster.py  # 省份聚类测试 (43)
 │   ├── test_alerts.py            # 预警系统测试 (37)
-│   └── test_scenarios.py         # 情景分析测试 (56)
+│   ├── test_scenarios.py         # 情景分析测试 (56)
+│   ├── test_visualization.py     # 可视化测试 (80)
+│   ├── test_report_gen.py        # 报告生成测试 (46)
+│   ├── test_content.py           # 内容辅助函数测试 (26)
+│   ├── test_styles.py            # 主题样式测试 (30)
+│   ├── test_export.py            # 数据导出测试 (16)
+│   ├── test_dashboard_integration.py # Dashboard集成测试 (55)
+│   └── run_tests.sh              # CI友好测试运行器
 ├── CHANGELOG.md                  # 版本变更记录 (v3.0)
 ├── README.md
 ├── requirements.txt
@@ -129,7 +137,13 @@ pip install -r requirements.txt
 ### 运行测试
 
 ```bash
+# 全部测试 (551个)
 pytest tests/ -v
+
+# CI友好运行器 (6种模式)
+bash tests/run_tests.sh all      # 全部测试
+bash tests/run_tests.sh quick    # 快速测试
+bash tests/run_tests.sh count    # 仅计数
 ```
 
 ### 运行分析
@@ -164,6 +178,7 @@ streamlit run dashboard.py
 | **信号提取** | 卡尔曼滤波器 | `statsmodels` | 分离基本面信号与市场噪音 |
 | **尾部风险** | 极值理论 (POT) | `scipy.stats` | 估计极端损失的概率分布 |
 | **市场状态** | 5指标加权融合 | `numpy` | 实时市场健康度评估 |
+| **报告生成** | PDF/Excel/HTML/PPT | `reportlab/python-pptx` | 多格式战略报告输出 + 3模板风格 |
 | **省份聚类** | 层次聚类 (Ward) | `scipy` | 31省利差特征分组 |
 | **可视化** | 交互式图表 | `plotly` | 专业级数据展示 |
 
