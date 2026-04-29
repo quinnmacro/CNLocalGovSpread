@@ -788,3 +788,93 @@ class TestCalibrationPipelineIntegration:
         assert 'T_DF' in config
         assert 'AR_PHI' in config
         assert isinstance(config['EWMA_LAMBDA'], (int, float))
+
+
+# ============================================================================
+# v3.0 Signal Analysis Page + Calibration Integration
+# ============================================================================
+
+@pytest.mark.integration
+class TestSignalAnalysisCalibrationIntegration:
+    """验证信号分析页面与校准参数的集成"""
+
+    def test_signal_page_references_calibrated(self):
+        """信号分析页面引用校准参数"""
+        project_root = os.path.join(os.path.dirname(__file__), '..')
+        page_path = os.path.join(project_root, 'pages', '1_📈_信号分析.py')
+        with open(page_path, 'r') as f:
+            content = f.read()
+        assert 'calibrated' in content
+        assert 'kalman_window' in content or 'kalman_window_cal' in content
+        assert 'signal_threshold' in content or 'signal_threshold_cal' in content
+
+    def test_signal_page_uses_calibrated_threshold(self):
+        """信号分析页面使用校准阈值而非硬编码1.5σ"""
+        project_root = os.path.join(os.path.dirname(__file__), '..')
+        page_path = os.path.join(project_root, 'pages', '1_📈_信号分析.py')
+        with open(page_path, 'r') as f:
+            content = f.read()
+        # 应有变量从calibrated dict获取signal_threshold
+        assert 'signal_threshold' in content
+        # 不应硬编码1.5作为唯一判断标准
+        lines_with_hardcoded = [l for l in content.split('\n')
+                                 if 'dev_val > 1.5' in l and 'signal_threshold' not in l]
+        assert len(lines_with_hardcoded) == 0, \
+            "Found hardcoded 1.5σ threshold without calibration override"
+
+    def test_signal_page_has_kalman_status(self):
+        """信号分析页面显示Kalman拟合状态"""
+        project_root = os.path.join(os.path.dirname(__file__), '..')
+        page_path = os.path.join(project_root, 'pages', '1_📈_信号分析.py')
+        with open(page_path, 'r') as f:
+            content = f.read()
+        assert 'kalman.success' in content or 'Kalman主模型' in content
+
+    def test_calibration_kalman_signal_pipeline(self, make_returns, make_spread_data):
+        """完整管线: 校准→Kalman(使用校准窗口)→信号偏离度(使用校准阈值)"""
+        from calibration import ParameterCalibrator
+        from kalman import KalmanSignalExtractor
+
+        returns = make_returns(n=200)
+        spread = make_spread_data(n=200)['spread']
+
+        # 校准
+        calibrator = ParameterCalibrator(returns, spread=spread)
+        calibrator.calibrate_all()
+        kalman_window = int(calibrator.calibrated.get('kalman_window', 60))
+        signal_threshold = calibrator.calibrated.get('signal_threshold', 1.5)
+
+        assert isinstance(kalman_window, int)
+        assert kalman_window > 0
+        assert isinstance(signal_threshold, float)
+        assert signal_threshold > 0
+
+        # 使用校准值传入Kalman
+        kalman = KalmanSignalExtractor(spread)
+        smoothed = kalman.fit(fallback_window=kalman_window)
+        deviation = kalman.get_signal_deviation()
+
+        assert smoothed is not None
+        assert deviation is not None
+        assert len(smoothed) == len(spread)
+
+        # 校准阈值应用于信号判断
+        dev_last = deviation.iloc[-1]
+        if dev_last > signal_threshold:
+            signal = 'sell'
+        elif dev_last < -signal_threshold:
+            signal = 'buy'
+        else:
+            signal = 'neutral'
+        assert signal in ['sell', 'buy', 'neutral']
+
+    def test_all_pages_reference_shared_state(self):
+        """所有页面文件正确引用shared_state模块"""
+        project_root = os.path.join(os.path.dirname(__file__), '..')
+        pages_dir = os.path.join(project_root, 'pages')
+        for filename in os.listdir(pages_dir):
+            if filename.endswith('.py'):
+                filepath = os.path.join(pages_dir, filename)
+                with open(filepath, 'r') as f:
+                    content = f.read()
+                assert 'from shared_state import' in content

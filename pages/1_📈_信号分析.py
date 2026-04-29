@@ -49,6 +49,36 @@ if results:
 
     st.divider()
 
+    # 参数校准详情
+    calibrated = results.get('calibrated') or {}
+    kalman_window_cal = calibrated.get('kalman_window')
+    signal_threshold_cal = calibrated.get('signal_threshold')
+    kalman = results['kalman']
+
+    if calibrated:
+        with st.expander("⚙️ 参数校准详情 (v3.0)", expanded=False):
+            st.markdown("""
+            **参数自校准** 使用数据驱动方法估计最优参数，替代硬编码默认值。
+            校准后的参数已自动应用于下游分析模块。
+            """)
+            cal_col1, cal_col2 = st.columns(2)
+            with cal_col1:
+                if kalman_window_cal is not None:
+                    safe_metric("卡尔曼窗口", kalman_window_cal, "天",
+                                help_text=f"数据驱动最优窗口 vs 默认60天")
+                else:
+                    st.metric("卡尔曼窗口", "60天 (默认)")
+            with cal_col2:
+                if signal_threshold_cal is not None:
+                    safe_metric("信号阈值", signal_threshold_cal, "σ",
+                                help_text=f"数据驱动偏离度阈值 vs 默认1.5σ")
+                else:
+                    st.metric("信号阈值", "1.5σ (默认)")
+
+            # Kalman拟合状态
+            kalman_status = "✅ Kalman主模型拟合成功" if kalman.success else "⚠️ 使用Fallback滚动均值"
+            st.info(f"**拟合状态**: {kalman_status}")
+
     # 图表
     fig1 = plot_signal_trend(clean_data, smoothed, deviation, theme)
     st.plotly_chart(fig1, use_container_width=True)
@@ -65,16 +95,20 @@ if results:
         safe_metric("波动率", winner_vol.iloc[-1])
         render_metric_interpretation("volatility")
 
-    # 交易信号解读
+    # 交易信号解读 (使用校准阈值或默认1.5σ)
+    signal_threshold = signal_threshold_cal if signal_threshold_cal is not None else 1.5
     st.markdown("### 🎯 交易信号解读")
-    if dev_val > 1.5:
-        alert_box(f"**做空信号**: 利差高估 {dev_val:.2f}σ", "danger")
+    threshold_source = "校准阈值" if signal_threshold_cal is not None else "默认阈值"
+    st.caption(f"当前阈值: {signal_threshold:.2f}σ ({threshold_source})")
+
+    if dev_val > signal_threshold:
+        alert_box(f"**做空信号**: 利差高估 {dev_val:.2f}σ (> {signal_threshold:.2f}σ)", "danger")
         render_trading_advice("sell")
-    elif dev_val < -1.5:
-        alert_box(f"**做多信号**: 利差低估 {dev_val:.2f}σ", "success")
+    elif dev_val < -signal_threshold:
+        alert_box(f"**做多信号**: 利差低估 {dev_val:.2f}σ (< -{signal_threshold:.2f}σ)", "success")
         render_trading_advice("buy")
     else:
-        alert_box(f"**中性信号**: 偏离度 {dev_val:.2f}σ", "info")
+        alert_box(f"**中性信号**: 偏离度 {dev_val:.2f}σ (阈值 ±{signal_threshold:.2f}σ)", "info")
         render_trading_advice("neutral")
 
 render_app_footer()

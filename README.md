@@ -112,7 +112,7 @@ CNLocalGovSpread/
 │   ├── test_content.py           # 内容辅助函数测试 (26)
 │   ├── test_styles.py            # 主题样式测试 (30)
 │   ├── test_export.py            # 数据导出测试 (16)
-│   ├── test_dashboard_integration.py # Dashboard集成测试 (55)
+│   ├── test_dashboard_integration.py # Dashboard集成测试 (67)
 │   └── run_tests.sh              # CI友好测试运行器
 ├── CHANGELOG.md                  # 版本变更记录 (v3.0)
 ├── README.md
@@ -139,7 +139,7 @@ pip install -r requirements.txt
 ### 运行测试
 
 ```bash
-# 全部测试 (565个)
+# 全部测试 (581个)
 pytest tests/ -v
 
 # CI友好运行器 (6种模式)
