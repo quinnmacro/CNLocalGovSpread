@@ -33,6 +33,7 @@ from .report import generate_strategic_report
 from .ml_volatility import MLVolatilityModeler
 from .calibration import ParameterCalibrator
 from .market_status import MarketStatusGauge
+from .province_cluster import ProvinceClusterMap
 
 __version__ = '3.0.0-dev'
 __author__ = 'Quinn Liu'
@@ -56,5 +57,6 @@ __all__ = [
     'MLVolatilityModeler',
     'ParameterCalibrator',
     'MarketStatusGauge',
+    'ProvinceClusterMap',
     'export_to_excel'
 ]

@@ -23,6 +23,7 @@ from shared_state import (
     render_page_header
 )
 from market_status import MarketStatusGauge
+from province_cluster import ProvinceClusterMap
 import numpy as np
 
 # ============================================================================
@@ -147,6 +148,40 @@ if results:
             else:
                 icon = '🔴'
             st.metric(f"{icon} {name}", f"{score:.0f}")
+
+    # =========================================================================
+    # 省级利差聚类分析
+    # =========================================================================
+    st.divider()
+    st.markdown("#### 🗺️ 省级利差聚类分析")
+    pcm = ProvinceClusterMap(n_clusters=4)
+    pcm.run_clustering()
+
+    map_col, radar_col = st.columns([3, 2])
+    with map_col:
+        geo_fig = pcm.plot_choropleth_map(theme='light' if theme != 'dark' else 'dark')
+        st.plotly_chart(geo_fig, use_container_width=True)
+    with radar_col:
+        cluster_radar = pcm.plot_cluster_comparison(theme='light' if theme != 'dark' else 'dark')
+        st.plotly_chart(cluster_radar, use_container_width=True)
+
+    # 聚类摘要
+    cluster_stats = pcm.get_cluster_stats()
+    summary_cols = st.columns(4)
+    for i, (c, s) in enumerate(cluster_stats.items()):
+        with summary_cols[i]:
+            risk_icon = {'高风险': '🔴', '中等风险': '🟡', '低风险': '🔵', '极低风险': '🟢'}
+            icon = risk_icon.get(s['risk_level'], '⚪')
+            st.metric(
+                f"{icon} 簇{c}",
+                f"{s['n_provinces']}省 | {s['risk_level']}",
+                f"均值 {s['mean_spread_avg']:.1f} bps"
+            )
+
+    # 热力图 (展开查看)
+    with st.expander("🔍 查看省级聚类热力图"):
+        heatmap_fig = pcm.plot_cluster_heatmap(theme='light' if theme != 'dark' else 'dark')
+        st.plotly_chart(heatmap_fig, use_container_width=True)
 
     # =========================================================================
     # 快速解读卡片
