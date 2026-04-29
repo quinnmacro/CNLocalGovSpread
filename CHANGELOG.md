@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Phase 3: Test Coverage & Documentation
 
 #### Added
-- **Expanded test suite from 17 tests to 682 tests** across 17 test files:
+- **Expanded test suite from 17 tests to 741 tests** across 18 test files:
   - `test_all.py` (17) - original core module tests
   - `test_ml_volatility.py` (15) - ML volatility module tests
   - `test_calibration.py` (39) - parameter calibration tests
@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `test_content.py` (26) - content helper function tests
   - `test_kalman.py` (41) - KalmanSignalExtractor tests (init, fit, fallback, deviation, data patterns, integration, boundary)
   - `test_evt.py` (60) - EVTRiskAnalyzer tests (init, fit_gpd, VaR, ES, tail index, mean excess plot, Hill estimator, integration, boundary)
+  - `test_data_engine.py` (59) - DataEngine tests (init, load dispatch, mock gen, CSV, clean/MAD, returns, workflow, boundary)
   - `test_styles.py` (30) - Streamlit styles rendering tests
   - `test_export.py` (16) - Excel export tests
   - `test_dashboard_integration.py` (67) - dashboard integration tests (incl. calibration pipeline + signal page)

@@ -141,7 +141,7 @@ pip install -r requirements.txt
 ### 运行测试
 
 ```bash
-# 全部测试 (682个)
+# 全部测试 (741个)
 pytest tests/ -v
 
 # CI友好运行器 (6种模式)
