@@ -31,6 +31,7 @@ from .visualization import (
 )
 from .report import generate_strategic_report
 from .ml_volatility import MLVolatilityModeler
+from .calibration import ParameterCalibrator
 
 __version__ = '3.0.0-dev'
 __author__ = 'Quinn Liu'
@@ -52,5 +53,6 @@ __all__ = [
     'plot_spread_premium_analysis',
     'generate_strategic_report',
     'MLVolatilityModeler',
+    'ParameterCalibrator',
     'export_to_excel'
 ]
