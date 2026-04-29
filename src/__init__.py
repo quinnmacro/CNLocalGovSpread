@@ -49,6 +49,29 @@ from .content import (
     get_volatility_comment,
     get_var_comment,
 )
+from .scenarios import (
+    run_stress_test,
+    run_multi_scenario_stress,
+    run_monte_carlo,
+    plot_mc_simulation,
+    run_sensitivity_analysis,
+    calculate_rolling_stats,
+    detect_historical_events,
+    plot_rolling_stats,
+    plot_percentile_chart,
+)
+from .alerts import (
+    check_risk_alerts,
+    get_risk_score,
+    generate_alert_history,
+    plot_alert_timeline,
+    plot_risk_gauge,
+    plot_risk_summary,
+    get_default_thresholds,
+    validate_thresholds,
+    format_alert_message,
+    get_alert_summary,
+)
 
 __version__ = '3.0.0'
 __author__ = 'Quinn Liu'
@@ -85,4 +108,23 @@ __all__ = [
     'get_spread_position_comment',
     'get_volatility_comment',
     'get_var_comment',
+    'run_stress_test',
+    'run_multi_scenario_stress',
+    'run_monte_carlo',
+    'plot_mc_simulation',
+    'run_sensitivity_analysis',
+    'calculate_rolling_stats',
+    'detect_historical_events',
+    'plot_rolling_stats',
+    'plot_percentile_chart',
+    'check_risk_alerts',
+    'get_risk_score',
+    'generate_alert_history',
+    'plot_alert_timeline',
+    'plot_risk_gauge',
+    'plot_risk_summary',
+    'get_default_thresholds',
+    'validate_thresholds',
+    'format_alert_message',
+    'get_alert_summary',
 ]
