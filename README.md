@@ -115,6 +115,7 @@ CNLocalGovSpread/
 │   ├── test_kalman.py            # 卡尔曼滤波器测试 (41)
 │   ├── test_evt.py               # 极值理论测试 (60)
 │   ├── test_dashboard_integration.py # Dashboard集成测试 (67)
+│   ├── test_volatility.py         # GARCH锦标赛+状态检测测试 (102)
 │   └── run_tests.sh              # CI友好测试运行器
 ├── CHANGELOG.md                  # 版本变更记录 (v3.0)
 ├── README.md
@@ -141,7 +142,7 @@ pip install -r requirements.txt
 ### 运行测试
 
 ```bash
-# 全部测试 (741个)
+# 全部测试 (843个)
 pytest tests/ -v
 
 # CI友好运行器 (6种模式)
