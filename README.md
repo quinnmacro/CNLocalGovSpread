@@ -65,6 +65,9 @@ Quinn Liu is a senior fixed income investment professional with 8+ years of expe
 
 ```
 CNLocalGovSpread/
+├── .github/
+│   └── workflows/
+│       └── ci.yml                 # GitHub Actions CI pipeline (v3.0)
 ├── app.py                        # 多页面Dashboard入口 (v3.0)
 ├── shared_state.py               # Dashboard共享状态模块 (v3.0)
 ├── dashboard.py                  # 单页面Dashboard (向后兼容)
@@ -150,6 +153,9 @@ pytest tests/ -v
 bash tests/run_tests.sh all      # 全部测试
 bash tests/run_tests.sh quick    # 快速测试
 bash tests/run_tests.sh count    # 仅计数
+
+# GitHub Actions CI (自动运行)
+# Push/PR触发: 多Python版本 (3.9-3.12) + lint + 测试计数验证
 ```
 
 ### 运行分析

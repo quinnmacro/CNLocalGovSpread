@@ -63,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `conftest.py` - shared pytest fixtures (15 factories + 3 mock fixtures + markers)
 
 - **CI-friendly test runner** (`run_tests.sh`) with 6 modes: all/quick/coverage/integration/dashboard/smoke/count
+- **GitHub Actions CI workflow** (`.github/workflows/ci.yml`): Automated test+lint pipeline on push/PR across Python 3.9-3.12 with test count verification (≥200)
 - **reportlab dependency** added to requirements.txt for PDF generation
 - **python-pptx dependency** added to requirements.txt for PPT generation
 - **XGBoost dependency** added to requirements.txt (optional LSTM via commented tensorflow)
