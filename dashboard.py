@@ -674,7 +674,7 @@ if st.session_state.analysis_done:
 # 页脚
 # ============================================================================
 render_footer(
-    version='2.5.0',
+    version='3.0.0',
     author='Quinn Liu',
     github='https://github.com/quinnmacro/CNLocalGovSpread',
     linkedin='https://www.linkedin.com/in/liulu-math'

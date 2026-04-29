@@ -29,7 +29,7 @@ DISCLAIMER = """
 3. 风险提示：投资有风险，决策需谨慎。请在专业人士指导下做出投资决策。
 4. 免责：报告作者不对因使用本报告内容而导致的任何损失承担责任。
 
-本报告基于CNLocalGovSpread框架生成，版本: 2.4.0
+本报告基于CNLocalGovSpread框架生成，版本: 3.0.0
 """
 
 
@@ -431,7 +431,7 @@ class ReportGenerator:
 
         html += f"""
         <div class="footer">
-            <p>CNLocalGovSpread v1.4.0 | Author: Quinn Liu</p>
+            <p>CNLocalGovSpread v3.0.0 | Author: Quinn Liu</p>
             <p><a href="https://github.com/quinnmacro/CNLocalGovSpread">GitHub</a> | <a href="https://www.linkedin.com/in/liulu-math">LinkedIn</a></p>
         </div>
     </div>

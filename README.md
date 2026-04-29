@@ -3,7 +3,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
-![Version](https://img.shields.io/badge/Version-2.3.0-brightgreen.svg)
+![Version](https://img.shields.io/badge/Version-3.0.0-brightgreen.svg)
 
 **Author: Quinn Liu**
 
@@ -29,20 +29,31 @@ Quinn Liu is a senior fixed income investment professional with 8+ years of expe
 ### 核心功能
 
 ✅ **三大分析模块**:
-1. **波动率建模锦标赛** - GARCH/EGARCH/GJR-GARCH 模型竞争
+1. **波动率建模锦标赛** - GARCH/EGARCH/GJR-GARCH + FIGARCH 长记忆检测 模型竞争
 2. **卡尔曼滤波器** - 从市场噪音中提取真实信号
 3. **极值理论 (EVT)** - 基于 GPD 的尾部风险量化
 
-✅ **交互式Dashboard** - Streamlit 现代化仪表板 (v2.3新增)
+✅ **ML模型扩展** (v3.0新增):
+- Random Forest / XGBoost / LSTM 波动率预测
+- ML与GARCH统一评估 (AIC/BIC + RMSE/MAE)
+- 特征工程 (9维滚动窗口统计量)
+
+✅ **参数自校准** (v3.0新增):
+- EWMA lambda (QLIKE优化)
+- t分布 df (MLE估计)
+- AR(1) phi (OLS回归)
+- EVT阈值 (MEF稳定性检测)
+- 卡尔曼窗口/信号阈值 (数据驱动)
+
+✅ **交互式Dashboard 2.0** (v3.0重构):
+- 多页面Streamlit架构 (app.py + pages/)
+- 市场状态仪表盘 (5指标加权融合)
+- 省份聚类地图 (31省层次聚类 + 地理分布)
 - 深色/浅色双主题切换
 - 情景分析（压力测试、蒙特卡洛模拟）
 - 风险预警系统
 - 报告生成中心（PDF/Excel/HTML）
-- **计量经济学教育内容** (v2.3新增)
-  - 模型理论解释（Kalman/GARCH/EVT）
-  - 指标解读指南
-  - 交易建议模板
-  - 市场背景故事
+- 计量经济学教育内容
 
 ✅ **交互式可视化** - 使用 Plotly 生成专业图表（中文标注）
 
@@ -54,24 +65,46 @@ Quinn Liu is a senior fixed income investment professional with 8+ years of expe
 
 ```
 CNLocalGovSpread/
+├── app.py                        # 多页面Dashboard入口 (v3.0)
+├── shared_state.py               # Dashboard共享状态模块 (v3.0)
+├── dashboard.py                  # 单页面Dashboard (向后兼容)
+├── pages/                        # 多页面子页面 (v3.0)
+│   ├── 1_📈_信号分析.py
+│   ├── 2_📉_波动率分析.py
+│   ├── 3_⚠️_风险分析.py
+│   ├── 4_🎯_情景分析.py
+│   ├── 5_📜_历史回溯.py
+│   └── 6_📋_报告中心.py
 ├── src/                          # 源代码模块
-│   ├── __init__.py
+│   ├── __init__.py               # v3.0.0
 │   ├── data_engine.py            # 数据引擎
-│   ├── volatility.py             # GARCH模型锦标赛
+│   ├── volatility.py             # GARCH锦标赛 + FIGARCH (v3.0)
 │   ├── kalman.py                 # 卡尔曼滤波器
-│   ├── evt.py                    # 极值理论分析
+│   ├── evt.py                    # 极值理论分析 (含MEF阈值选择 v3.0)
 │   ├── visualization.py          # 可视化函数
-│   ├── styles.py                 # 主题样式系统 (v2.0)
-│   ├── scenarios.py              # 情景分析模块 (v2.0)
-│   ├── alerts.py                 # 风险预警系统 (v2.0)
-│   ├── report_gen.py             # 报告生成中心 (v2.0)
-│   ├── content.py                # 计量经济学教育内容 (v2.3)
+│   ├── ml_volatility.py          # ML波动率模型 (v3.0)
+│   ├── calibration.py            # 参数自校准 (v3.0)
+│   ├── market_status.py          # 市场状态仪表 (v3.0)
+│   ├── province_cluster.py       # 省份聚类地图 (v3.0)
+│   ├── styles.py                 # 主题样式系统
+│   ├── scenarios.py              # 情景分析模块
+│   ├── alerts.py                 # 风险预警系统
+│   ├── report_gen.py             # 报告生成中心
+│   ├── content.py                # 计量经济学教育内容
+│   ├── export.py                 # 数据导出
 │   └── report.py                 # 战略报告生成
-├── dashboard.py                  # Streamlit仪表板 (v2.3)
 ├── notebooks/
 │   └── analysis.ipynb            # 主分析Notebook
 ├── tests/
-│   └── test_all.py               # 单元测试
+│   ├── test_all.py               # 核心模块测试 (17)
+│   ├── test_ml_volatility.py     # ML波动率测试 (15)
+│   ├── test_calibration.py       # 参数校准测试 (39)
+│   ├── test_figarch.py           # FIGARCH测试 (23)
+│   ├── test_market_status.py     # 市场状态测试 (37)
+│   ├── test_province_cluster.py  # 省份聚类测试 (43)
+│   ├── test_alerts.py            # 预警系统测试 (37)
+│   └── test_scenarios.py         # 情景分析测试 (56)
+├── CHANGELOG.md                  # 版本变更记录 (v3.0)
 ├── README.md
 ├── requirements.txt
 └── LICENSE
@@ -106,9 +139,13 @@ cd notebooks
 jupyter notebook analysis.ipynb
 ```
 
-### 运行Dashboard (v2.0)
+### 运行Dashboard (v3.0)
 
 ```bash
+# 多页面Dashboard (推荐)
+streamlit run app.py
+
+# 单页面Dashboard (向后兼容)
 streamlit run dashboard.py
 ```
 
@@ -120,9 +157,14 @@ streamlit run dashboard.py
 
 | 模块 | 技术 | 核心库 | 用途 |
 |------|------|--------|------|
-| **波动率建模** | GARCH 模型族 | `arch` | 捕捉波动率聚集和不对称效应 |
+| **波动率建模** | GARCH/EGARCH/GJR-GARCH | `arch` | 捕捉波动率聚集和不对称效应 |
+| **长记忆检测** | FIGARCH (GPH估计) | `numpy` | 检测波动率长记忆特征 |
+| **ML波动率** | RF/XGBoost/LSTM | `sklearn/xgboost` | 机器学习波动率预测对比 |
+| **参数校准** | QLIKE/MLE/OLS | `scipy/statsmodels` | 数据驱动参数估计 |
 | **信号提取** | 卡尔曼滤波器 | `statsmodels` | 分离基本面信号与市场噪音 |
 | **尾部风险** | 极值理论 (POT) | `scipy.stats` | 估计极端损失的概率分布 |
+| **市场状态** | 5指标加权融合 | `numpy` | 实时市场健康度评估 |
+| **省份聚类** | 层次聚类 (Ward) | `scipy` | 31省利差特征分组 |
 | **可视化** | 交互式图表 | `plotly` | 专业级数据展示 |
 
 ### 数据引擎

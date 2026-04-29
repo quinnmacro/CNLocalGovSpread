@@ -35,7 +35,7 @@ from .calibration import ParameterCalibrator
 from .market_status import MarketStatusGauge
 from .province_cluster import ProvinceClusterMap
 
-__version__ = '3.0.0-dev'
+__version__ = '3.0.0'
 __author__ = 'Quinn Liu'
 
 __all__ = [
