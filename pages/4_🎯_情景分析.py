@@ -10,7 +10,8 @@ from shared_state import (
     init_page, render_sidebar, ensure_analysis,
     get_results, safe_metric, render_app_footer,
     run_stress_test, run_multi_scenario_stress,
-    run_monte_carlo, plot_mc_simulation,
+    run_monte_carlo, plot_mc_simulation, plot_mc_paths,
+    run_sensitivity_analysis, plot_sensitivity_analysis,
     render_page_header
 )
 import pandas as pd
@@ -86,11 +87,47 @@ if results:
         c4.metric("99% ES", f"{mc['es_99']:.4f}")
         st.plotly_chart(plot_mc_simulation(mc, theme), use_container_width=True)
 
+        # MC路径可视化
+        st.markdown("#### 🛤️ 模拟路径")
+        st.caption("展示蒙特卡洛模拟的典型路径走势及95%置信区间。")
+        st.plotly_chart(plot_mc_paths(mc, n_paths=50, theme=theme), use_container_width=True)
+
         st.info(f"""
         **模拟结果解读**:
         - 模拟了{n_sim:,}条可能路径，预测{horizon}天后的利差变化
         - 99%概率下，损失不超过{mc['var_99']:.4f}
         - 如果发生极端情况，平均损失为{mc['es_99']:.4f}
         """)
+
+    # 敏感性分析
+    st.divider()
+    st.markdown("### 🔬 敏感性分析")
+    st.caption("评估关键参数变化对VaR/ES风险指标的影响程度。")
+
+    sa_col1, sa_col2 = st.columns(2)
+    with sa_col1:
+        sa_param = st.selectbox("分析参数", ["volatility", "mean", "df"],
+                                format_func=lambda x: {
+                                    'volatility': '波动率 σ',
+                                    'mean': '均值 μ',
+                                    'df': '自由度 df'
+                                }.get(x, x))
+    with sa_col2:
+        if st.button("运行敏感性分析", type="primary"):
+            st.session_state['sensitivity'] = run_sensitivity_analysis(returns, param=sa_param)
+
+    if 'sensitivity' in st.session_state:
+        sa_df = st.session_state['sensitivity']
+        st.plotly_chart(plot_sensitivity_analysis(sa_df, param=sa_param, theme=theme), use_container_width=True)
+
+        # 敏感性摘要
+        if len(sa_df) > 1:
+            var_range = sa_df['var_99'].max() - sa_df['var_99'].min()
+            es_range = sa_df['es_99'].max() - sa_df['es_99'].min()
+            sa_sum = st.columns(2)
+            with sa_sum[0]:
+                safe_metric("VaR变化幅度", var_range, help_text="参数全范围内VaR的最大变化量")
+            with sa_sum[1]:
+                safe_metric("ES变化幅度", es_range, help_text="参数全范围内ES的最大变化量")
 
 render_app_footer()

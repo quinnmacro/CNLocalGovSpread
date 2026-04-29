@@ -687,3 +687,104 @@ class TestConftestFixtures:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v', '-m', 'integration'])
+
+
+# ============================================================================
+# v3.0 校准参数集成验证
+# ============================================================================
+
+@pytest.mark.integration
+class TestCalibrationPipelineIntegration:
+    """验证校准参数实际传递到下游模块"""
+
+    def test_ewma_lambda_passed_to_tournament(self):
+        """校准的EWMA lambda传入run_tournament替代默认0.94"""
+        from volatility import VolatilityModeler
+        returns = pd.Series(np.random.randn(200) * 0.01)
+
+        vol = VolatilityModeler(returns)
+        vol.run_tournament(ewma_lambda=0.96)
+        assert 'EWMA' in vol.ic_scores
+
+    def test_ewma_lambda_none_uses_default(self):
+        """ewma_lambda=None时使用默认0.94"""
+        from volatility import VolatilityModeler
+        returns = pd.Series(np.random.randn(200) * 0.01)
+
+        vol = VolatilityModeler(returns)
+        vol.run_tournament(ewma_lambda=None)
+        assert 'EWMA' in vol.ic_scores
+
+    def test_kalman_fallback_window_param(self):
+        """校准的kalman_window传入KalmanSignalExtractor.fit()"""
+        from kalman import KalmanSignalExtractor
+        spread = pd.Series(np.random.randn(200).cumsum() + 100, name='spread')
+
+        kalman = KalmanSignalExtractor(spread)
+        # 使用自定义fallback_window参数
+        result = kalman.fit(fallback_window=30)
+        assert result is not None
+
+    def test_evt_threshold_from_calibration(self):
+        """校准的EVT阈值替代sidebar默认0.95"""
+        from evt import EVTRiskAnalyzer
+        returns = pd.Series(np.random.randn(200) * 0.01)
+
+        evt = EVTRiskAnalyzer(returns, threshold_percentile=0.92)
+        evt.fit_gpd()
+        assert evt.threshold_percentile == 0.92
+
+    def test_calibration_before_garch_pipeline(self):
+        """完整管线: 校准→GARCH(使用校准lambda)→EVT(使用校准阈值)"""
+        from calibration import ParameterCalibrator
+        from volatility import VolatilityModeler
+        from evt import EVTRiskAnalyzer
+
+        np.random.seed(42)
+        returns = pd.Series(np.random.randn(200) * 0.01)
+
+        # 先校准
+        calibrator = ParameterCalibrator(returns)
+        calibrator.calibrate_all()
+        calibrated = calibrator.calibrated
+
+        # 使用校准值
+        ewma_lambda = calibrated.get('ewma_lambda')
+        evt_threshold = calibrated.get('evt_threshold_percentile', 0.95)
+
+        assert ewma_lambda is not None
+        assert isinstance(ewma_lambda, float)
+
+        vol = VolatilityModeler(returns)
+        winner = vol.run_tournament(ewma_lambda=ewma_lambda)
+
+        evt = EVTRiskAnalyzer(returns, threshold_percentile=evt_threshold)
+        evt.fit_gpd()
+
+        # 校准值应与默认值不同或相同(取决于数据)
+        assert isinstance(evt_threshold, float)
+
+    def test_calibrated_values_are_floats_not_dicts(self):
+        """calibrated dict存储的是flat float值, 不是nested dict"""
+        from calibration import ParameterCalibrator
+
+        returns = pd.Series(np.random.randn(200) * 0.01)
+        calibrator = ParameterCalibrator(returns)
+        calibrator.calibrate_all()
+
+        for key, val in calibrator.calibrated.items():
+            assert isinstance(val, (int, float)), f"{key}应为float, 实际为{type(val)}"
+
+    def test_get_calibration_config_returns_flat_dict(self):
+        """get_calibration_config()返回flat dict可直接传入模块"""
+        from calibration import ParameterCalibrator
+
+        returns = pd.Series(np.random.randn(200) * 0.01)
+        calibrator = ParameterCalibrator(returns)
+        calibrator.calibrate_all()
+
+        config = calibrator.get_calibration_config()
+        assert 'EWMA_LAMBDA' in config
+        assert 'T_DF' in config
+        assert 'AR_PHI' in config
+        assert isinstance(config['EWMA_LAMBDA'], (int, float))

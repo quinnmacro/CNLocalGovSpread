@@ -42,6 +42,9 @@ from scenarios import (
     run_multi_scenario_stress,
     run_monte_carlo,
     plot_mc_simulation,
+    plot_mc_paths,
+    run_sensitivity_analysis,
+    plot_sensitivity_analysis,
     calculate_rolling_stats,
     detect_historical_events,
     plot_rolling_stats,
@@ -208,12 +211,30 @@ def ensure_analysis(config, run_analysis):
             st.error(f"数据加载失败: {str(e)}")
             st.stop()
 
+        # 参数自动校准 (先于分析模块, 以便将校准值传入下游)
+        if need_load:
+            load_placeholder.update(label="⚙️ 参数自动校准...")
+        try:
+            calibrator = ParameterCalibrator(returns, spread=clean_data.get('spread'))
+            calibrator.calibrate_all()
+            st.session_state.calibrator = calibrator
+            st.session_state.calibrated = calibrator.calibrated
+        except Exception as e:
+            st.session_state.calibrator = None
+            st.session_state.calibrated = None
+
+        # 提取校准值用于下游模块
+        calibrated = st.session_state.calibrated or {}
+        ewma_lambda = calibrated.get('ewma_lambda')
+        evt_threshold = calibrated.get('evt_threshold_percentile', config['EVT_THRESHOLD_PERCENTILE'])
+        kalman_window = int(calibrated.get('kalman_window', 60))
+
         # 卡尔曼滤波
         if need_load:
             load_placeholder.update(label="📈 拟合卡尔曼滤波...")
         try:
             kalman = KalmanSignalExtractor(clean_data['spread'])
-            smoothed = kalman.fit()
+            smoothed = kalman.fit(fallback_window=kalman_window)
             deviation = kalman.get_signal_deviation()
             st.session_state.kalman = kalman
             st.session_state.smoothed = smoothed
@@ -227,7 +248,7 @@ def ensure_analysis(config, run_analysis):
             load_placeholder.update(label="📉 运行GARCH锦标赛...")
         try:
             vol_modeler = VolatilityModeler(returns)
-            winner = vol_modeler.run_tournament()
+            winner = vol_modeler.run_tournament(ewma_lambda=ewma_lambda)
             winner_vol = vol_modeler.get_conditional_volatility(winner)
             st.session_state.vol_modeler = vol_modeler
             st.session_state.winner = winner
@@ -240,7 +261,7 @@ def ensure_analysis(config, run_analysis):
         if need_load:
             load_placeholder.update(label="⚠️ 拟合EVT模型...")
         try:
-            evt = EVTRiskAnalyzer(returns, threshold_percentile=config['EVT_THRESHOLD_PERCENTILE'],
+            evt = EVTRiskAnalyzer(returns, threshold_percentile=evt_threshold,
                                   confidence=config['VaR_CONFIDENCE'])
             evt.fit_gpd()
             var = evt.calculate_var()
@@ -293,17 +314,16 @@ def ensure_analysis(config, run_analysis):
             st.session_state.garch_comparison = None
             st.session_state.garch_overall_winner = None
 
-        # 参数自动校准
+        # GARCH持续性诊断 (使用已校准的GARCH结果)
         if need_load:
-            load_placeholder.update(label="⚙️ 参数自动校准...")
+            load_placeholder.update(label="📊 GARCH持续性诊断...")
         try:
-            calibrator = ParameterCalibrator(returns, spread=clean_data.get('spread'))
-            calibrator.calibrate_all()
-            st.session_state.calibrator = calibrator
-            st.session_state.calibrated = calibrator.calibrated
+            if st.session_state.calibrator:
+                st.session_state.calibrator.diagnose_garch_persistence(
+                    garch_results=st.session_state.vol_modeler.results
+                )
         except Exception as e:
-            st.session_state.calibrator = None
-            st.session_state.calibrated = None
+            pass
 
         st.session_state.analysis_done = True
 

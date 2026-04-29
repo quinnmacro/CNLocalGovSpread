@@ -208,13 +208,13 @@ if results:
     if calibrated:
         cal_cols = st.columns(3)
         with cal_cols[0]:
-            safe_metric("EWMA λ", calibrated.get('ewma_lambda', {}).get('value', None),
+            safe_metric("EWMA λ", calibrated.get('ewma_lambda'),
                        help_text="QLIKE优化估计的EWMA衰减因子")
         with cal_cols[1]:
-            safe_metric("t分布 df", calibrated.get('t_df', {}).get('value', None),
+            safe_metric("t分布 df", calibrated.get('t_df'),
                        help_text="MLE估计的Student-t自由度参数")
         with cal_cols[2]:
-            safe_metric("AR(1) φ", calibrated.get('ar_phi', {}).get('value', None),
+            safe_metric("AR(1) φ", calibrated.get('ar_phi'),
                        help_text="OLS估计的利差变化AR系数")
 
         # 校准参数对比默认值
@@ -228,8 +228,7 @@ if results:
             'signal_threshold': ('信号阈值σ', 1.5),
         }
         for key, (name, default) in default_vs_calibrated.items():
-            cal_info = calibrated.get(key, {})
-            cal_val = cal_info.get('value', None)
+            cal_val = calibrated.get(key)
             if cal_val is not None:
                 diff_pct = ((cal_val - default) / default) * 100 if default != 0 else 0
                 param_data.append({

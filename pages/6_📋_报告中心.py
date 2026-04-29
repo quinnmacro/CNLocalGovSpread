@@ -44,7 +44,13 @@ if results:
     col1, col2 = st.columns(2)
     with col1:
         title = st.text_input("报告标题", "地方债利差分析报告")
-        fmt = st.selectbox("格式", ["HTML", "PDF", "Excel"])
+        fmt = st.selectbox("格式", ["HTML", "PDF", "Excel", "PPT"])
+        template = st.selectbox("模板", ["professional", "academic", "executive"],
+                                format_func=lambda x: {
+                                    'professional': '🏢 专业版',
+                                    'academic': '📚 学术版',
+                                    'executive': '👔 执行版'
+                                }.get(x, x))
     with col2:
         sections = st.multiselect(
             "章节",
@@ -57,7 +63,8 @@ if results:
         if st.button("📄 生成报告", type="primary"):
             with st.spinner("生成中..."):
                 path = generate_report(clean_data, returns, kalman, vol_modeler, evt,
-                                      title=title, format=fmt, sections=sections)
+                                      title=title, format=fmt, sections=sections,
+                                      template=template)
                 st.success(f"✓ {path}")
                 st.session_state['report'] = path
 

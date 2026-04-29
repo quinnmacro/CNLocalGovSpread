@@ -189,12 +189,13 @@ class VolatilityModeler:
 
         return ewma_volatility
 
-    def run_tournament(self, include_figarch=False):
+    def run_tournament(self, include_figarch=False, ewma_lambda=None):
         """
         执行锦标赛 - 拟合所有模型并选出 Winner
 
         参数:
         - include_figarch: 是否包含FIGARCH模型 (默认False, 因计算较慢)
+        - ewma_lambda: EWMA衰减因子 (None=使用默认0.94, 否则使用校准值)
         """
         print("\n" + "="*60)
         print("开始波动率模型锦标赛")
@@ -203,7 +204,7 @@ class VolatilityModeler:
         self.fit_garch()
         self.fit_egarch()
         self.fit_gjr_garch()
-        self.fit_ewma()
+        self.fit_ewma(lambda_param=ewma_lambda or 0.94)
         if include_figarch:
             self.fit_figarch()
 
