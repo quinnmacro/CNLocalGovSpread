@@ -27,7 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Added
 - **MarketStatusGauge module** (`src/market_status.py`): 5-indicator composite scoring system (spread position, volatility regime, VaR breach, signal deviation, trend momentum) with weighted fusion, 5-level status classification (safe/watch/caution/warning/danger), extreme indicator upgrade logic, and 3 Plotly visualizations (multi-segment gauge, radar linkage chart, rolling timeline)
-- **ProvinceClusterMap module** (`src/province_cluster.py`): 31-province hierarchical clustering using regional characteristic seeds (东部沿海/中部内陆/西部开发/东北老工业), 5-feature vectors, Ward/complete/average methods, and 3 Plotly visualizations (clustered heatmap, Scattergeo bubble map, cluster comparison radar chart)
+- **ProvinceClusterMap module** (`src/province_cluster.py`): 31-province hierarchical clustering using regional characteristic seeds (东部沿海/中部内陆/西部开发/东北老工业), 5-feature vectors, Ward/complete/average methods, and 3 Plotly visualizations (clustered heatmap, **true Choropleth map** with go.Choropleth + GeoJSON data, cluster comparison radar chart). Bubble map fallback when GeoJSON unavailable.
+- **ProvinceClusterMap integrated into 风险分析 dashboard page**: Province clustering choropleth + radar + cluster summary metrics now appear in the 风险分析 (Risk Analysis) page alongside EVT VaR/ES analysis
 
 - **EGARCH gamma check remnant bug in report.py**: Replaced misleading gamma[1] extraction (always 0 since arch EGARCH doesn't have that parameter) with proper logic that references GJR-GARCH results for explicit asymmetry measurement
 
@@ -41,19 +42,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Added
 - **MarketStatusGauge module** (`src/market_status.py`): 5-indicator composite scoring system (spread position, volatility regime, VaR breach, signal deviation, trend momentum) with weighted fusion, 5-level status classification (safe/watch/caution/warning/danger), extreme indicator upgrade logic, and 3 Plotly visualizations (multi-segment gauge, radar linkage chart, rolling timeline)
-- **ProvinceClusterMap module** (`src/province_cluster.py`): 31-province hierarchical clustering using regional characteristic seeds (东部沿海/中部内陆/西部开发/东北老工业), 5-feature vectors, Ward/complete/average methods, and 3 Plotly visualizations (clustered heatmap, Scattergeo bubble map, cluster comparison radar chart)
+- **ProvinceClusterMap module** (`src/province_cluster.py`): 31-province hierarchical clustering using regional characteristic seeds (东部沿海/中部内陆/西部开发/东北老工业), 5-feature vectors, Ward/complete/average methods, and 3 Plotly visualizations (clustered heatmap, **true Choropleth map** with go.Choropleth + GeoJSON data, cluster comparison radar chart). Bubble map fallback when GeoJSON unavailable.
 - **Report template selection**: 3 styles (professional/academic/executive) with color schemes and font sizes driving multi-format report generation
 
 ### Phase 3: Test Coverage & Documentation
 
 #### Added
-- **Expanded test suite from 17 tests to 551 tests** across 15 test files:
+- **Expanded test suite from 17 tests to 565 tests** across 15 test files:
   - `test_all.py` (17) - original core module tests
   - `test_ml_volatility.py` (15) - ML volatility module tests
   - `test_calibration.py` (39) - parameter calibration tests
   - `test_figarch.py` (23) - FIGARCH long-memory tests
   - `test_market_status.py` (37) - market status gauge tests
-  - `test_province_cluster.py` (43) - province clustering tests
+  - `test_province_cluster.py` (57) - province clustering tests (incl. Choropleth upgrade)
   - `test_alerts.py` (37) - risk alerts system tests
   - `test_scenarios.py` (56) - scenario/stress analysis tests
   - `test_visualization.py` (80) - Plotly visualization tests
@@ -78,6 +79,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **report_gen.py spread variable scope bug**: Moved spread definition to top of _prepare_report_data so it's available to all report sections
 - **5 test collection errors**: Corrected sys.path configuration in test files using 'from src.xxx import' pattern
 - **python-pptx MS_ANCHOR import**: Fixed ImportError in python-pptx v1.0.2 where MS_ANCHOR was removed from pptx.enum.text
+- **Choropleth upgrade**: Replaced bubble-map-only implementation with true go.Choropleth using local GeoJSON data file (data/china_provinces.geojson from DataV GeoAtlas), with automatic bubble map fallback when GeoJSON unavailable
+- **ProvinceClusterMap dashboard integration**: Province clustering was only in app.py overview, now also integrated into the 风险分析 (Risk Analysis) page
 
 ---
 

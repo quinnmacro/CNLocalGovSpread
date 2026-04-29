@@ -18,6 +18,8 @@
 
 import numpy as np
 import pandas as pd
+import json
+import os
 from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
 from scipy.spatial.distance import pdist
 import plotly.graph_objects as go
@@ -55,6 +57,18 @@ REGION_GROUPS = {
     '中部内陆': ['山西', '安徽', '江西', '河南', '湖北', '湖南'],
     '西部开发': ['内蒙古', '广西', '重庆', '四川', '贵州', '云南', '西藏', '陕西', '甘肃', '青海', '宁夏', '新疆'],
     '东北老工业': ['辽宁', '吉林', '黑龙江']
+}
+
+# GeoJSON全名 -> 箁名映射 (用于choropleth)
+GEOJSON_NAME_MAP = {
+    '北京市': '北京', '天津市': '天津', '河北省': '河北', '山西省': '山西',
+    '内蒙古自治区': '内蒙古', '辽宁省': '辽宁', '吉林省': '吉林', '黑龙江省': '黑龙江',
+    '上海市': '上海', '江苏省': '江苏', '浙江省': '浙江', '安徽省': '安徽',
+    '福建省': '福建', '江西省': '江西', '山东省': '山东', '河南省': '河南',
+    '湖北省': '湖北', '湖南省': '湖南', '广东省': '广东', '广西壮族自治区': '广西',
+    '海南省': '海南', '重庆市': '重庆', '四川省': '四川', '贵州省': '贵州',
+    '云南省': '云南', '西藏自治区': '西藏', '陕西省': '陕西', '甘肃省': '甘肃',
+    '青海省': '青海', '宁夏回族自治区': '宁夏', '新疆维吾尔自治区': '新疆'
 }
 
 # 区域利差特征种子 (Mock数据生成基准)
@@ -338,27 +352,106 @@ class ProvinceClusterMap:
         省级利差地理分布图 (Choropleth)
 
         使用省级利差均值进行地理可视化。
-        当GeoJSON数据不可用时，自动降级为气泡地图。
+        当GeoJSON数据可用时，渲染真正的区域填充choropleth；
+        当GeoJSON不可用时，自动降级为气泡地图。
 
         参数:
             theme: 'light' 或 'dark'
         """
         config = _get_theme_config(theme)
+        geojson = _load_choropleth_geojson()
 
-        # 准备数据
+        if geojson is not None:
+            return self._plot_true_choropleth(geojson, config, theme)
+        return self._plot_bubble_map(config, theme)
+
+    def _plot_true_choropleth(self, geojson, config, theme):
+        """真正的区域填充choropleth地图"""
         data = self._province_data.copy()
+        short_to_full = {v: k for k, v in GEOJSON_NAME_MAP.items()}
 
-        # 省级中心坐标 (用于气泡地图)
+        # 构造GeoJSON特征名 -> 利差值映射
+        locations = []
+        values = []
+        hover_texts = []
+
+        for province in data.index:
+            full_name = short_to_full.get(province)
+            if full_name is None:
+                continue
+            locations.append(full_name)
+            values.append(data.loc[province, 'mean_spread'])
+            if self._cluster_stats and 'cluster' in data.columns:
+                cluster = int(data.loc[province, 'cluster'])
+                risk = self._cluster_stats[cluster]['risk_level']
+                hover_texts.append(
+                    f'{province}<br>利差: {data.loc[province, "mean_spread"]:.1f} bps'
+                    f'<br>簇: {cluster} ({risk})'
+                )
+            else:
+                hover_texts.append(
+                    f'{province}<br>利差: {data.loc[province, "mean_spread"]:.1f} bps'
+                )
+
+        fig = go.Figure(go.Choropleth(
+            geojson=geojson,
+            featureidkey='properties.name',
+            locations=locations,
+            z=values,
+            colorscale=_get_choropleth_colorscale(theme),
+            zmin=data['mean_spread'].min(),
+            zmax=data['mean_spread'].max(),
+            text=hover_texts,
+            hovertemplate='%{text}<extra></extra>',
+            marker_line_color='white' if theme == 'light' else '#333',
+            marker_line_width=0.5,
+            colorbar=dict(
+                title='利差 (bps)',
+                thickness=15,
+                len=0.8
+            )
+        ))
+
+        fig.update_geos(
+            scope='asia',
+            center=dict(lat=35, lon=105),
+            projection_scale=5,
+            showland=True,
+            landcolor='#e8e8e8' if theme == 'light' else '#2d2d2d',
+            showocean=True,
+            oceancolor='#cfe2f3' if theme == 'light' else '#1a3a5f',
+            showlakes=True,
+            lakecolor='#cfe2f3' if theme == 'light' else '#1a3a5f',
+            showcountries=True,
+            countrycolor='#999999',
+            showsubunits=True,
+            subunitcolor='#cccccc' if theme == 'light' else '#555555',
+            fitbounds='locations'
+        )
+
+        fig.update_layout(
+            title='省级地方债利差地理分布 (Choropleth)',
+            height=600,
+            template=config['template'],
+            paper_bgcolor=config['paper_bgcolor'],
+            geo=dict(bgcolor=config['plot_bgcolor']),
+            font=dict(color=config['font_color']),
+            margin=dict(l=10, r=10, t=60, b=20)
+        )
+
+        return fig
+
+    def _plot_bubble_map(self, config, theme):
+        """气泡地图降级方案 (无GeoJSON时使用)"""
+        data = self._province_data.copy()
         province_coords = _get_province_coordinates()
 
-        # 匹配省份坐标
         valid_provinces = [p for p in data.index if p in province_coords]
         lons = [province_coords[p]['lon'] for p in valid_provinces]
         lats = [province_coords[p]['lat'] for p in valid_provinces]
         spreads = [data.loc[p, 'mean_spread'] for p in valid_provinces]
         sizes = [max(8, data.loc[p, 'mean_spread'] / 5) for p in valid_provinces]
 
-        # 聚类信息 (仅在有聚类结果时)
         if self._cluster_stats and 'cluster' in data.columns:
             hover_texts = [
                 f'{p}<br>利差: {data.loc[p, "mean_spread"]:.1f} bps'
@@ -372,10 +465,7 @@ class ProvinceClusterMap:
                 for p in valid_provinces
             ]
 
-        fig = go.Figure()
-
-        # 气泡地图 (可靠方案，不需要GeoJSON)
-        fig.add_trace(go.Scattergeo(
+        fig = go.Figure(go.Scattergeo(
             lon=lons,
             lat=lats,
             text=hover_texts,
@@ -413,13 +503,11 @@ class ProvinceClusterMap:
         )
 
         fig.update_layout(
-            title='省级地方债利差地理分布',
+            title='省级地方债利差地理分布 (气泡地图)',
             height=600,
             template=config['template'],
             paper_bgcolor=config['paper_bgcolor'],
-            geo=dict(
-                bgcolor=config['plot_bgcolor']
-            ),
+            geo=dict(bgcolor=config['plot_bgcolor']),
             font=dict(color=config['font_color']),
             margin=dict(l=10, r=10, t=60, b=20)
         )
@@ -566,3 +654,50 @@ def _get_province_coordinates():
         '宁夏': {'lat': 37.3, 'lon': 106.2},
         '新疆': {'lat': 43.8, 'lon': 87.6}
     }
+
+
+def _load_choropleth_geojson():
+    """
+    加载省级GeoJSON数据用于choropleth渲染
+
+    搜索路径:
+    1. data/china_provinces.geojson (项目数据目录)
+    2. 与本模块同级的data目录
+
+    返回:
+        GeoJSON dict 或 None (文件不存在时)
+    """
+    # 搜索GeoJSON文件路径
+    search_paths = [
+        os.path.join(os.path.dirname(__file__), '..', 'data', 'china_provinces.geojson'),
+        os.path.join(os.getcwd(), 'data', 'china_provinces.geojson'),
+    ]
+
+    for path in search_paths:
+        if os.path.exists(path):
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                continue
+
+    return None
+
+
+def _get_choropleth_colorscale(theme='light'):
+    """获取choropleth色阶配置"""
+    if theme == 'dark':
+        return [
+            [0, '#1a3a5f'],
+            [0.25, '#3b82f6'],
+            [0.5, '#f59e0b'],
+            [0.75, '#ef4444'],
+            [1, '#7f1d1d']
+        ]
+    return [
+        [0, '#f0f9ff'],
+        [0.25, '#7dd3fc'],
+        [0.5, '#fbbf24'],
+        [0.75, '#f87171'],
+        [1, '#991b1b']
+    ]

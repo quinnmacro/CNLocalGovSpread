@@ -23,7 +23,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src
 
 from province_cluster import (
     ProvinceClusterMap, PROVINCES, PROVINCE_SHORT,
-    REGION_GROUPS, REGION_BASE_PROFILES
+    REGION_GROUPS, REGION_BASE_PROFILES,
+    GEOJSON_NAME_MAP, _load_choropleth_geojson, _get_choropleth_colorscale,
+    _get_theme_config
 )
 
 
@@ -397,3 +399,117 @@ class TestEdgeCases:
         pcm = ProvinceClusterMap(n_clusters=8)
         labels = pcm.run_clustering()
         assert len(set(labels)) <= 8
+
+
+# ============================================================================
+# 10. Choropleth地图升级测试
+# ============================================================================
+
+class TestChoroplethUpgrade:
+
+    def test_geojson_name_map_complete(self):
+        """GeoJSON名称映射应覆盖31省"""
+        assert len(GEOJSON_NAME_MAP) == 31
+
+    def test_geojson_name_map_covers_all_provinces(self):
+        """所有省份箁名应在映射中"""
+        for province in PROVINCES:
+            assert province in GEOJSON_NAME_MAP.values()
+
+    def test_geojson_loads(self):
+        """GeoJSON文件应成功加载"""
+        geojson = _load_choropleth_geojson()
+        assert geojson is not None
+        assert geojson['type'] == 'FeatureCollection'
+        assert len(geojson['features']) == 31
+
+    def test_geojson_feature_names_match(self):
+        """GeoJSON省名应能映射到箁名"""
+        geojson = _load_choropleth_geojson()
+        geojson_names = [f['properties']['name'] for f in geojson['features']]
+        for name in geojson_names:
+            assert name in GEOJSON_NAME_MAP
+
+    def test_choropleth_trace_type(self, clustered_map):
+        """GeoJSON可用时应使用choropleth追踪类型"""
+        geojson = _load_choropleth_geojson()
+        if geojson:
+            fig = clustered_map.plot_choropleth_map(theme='light')
+            assert fig.data[0].type == 'choropleth'
+        else:
+            fig = clustered_map.plot_choropleth_map(theme='light')
+            assert fig.data[0].type == 'scattergeo'
+
+    def test_choropleth_locations_match_geojson(self, clustered_map):
+        """choropleth的locations应使用GeoJSON全名"""
+        geojson = _load_choropleth_geojson()
+        if geojson:
+            fig = clustered_map.plot_choropleth_map(theme='light')
+            trace = fig.data[0]
+            # 所有locations应在GeoJSON features中
+            geojson_names = set(f['properties']['name'] for f in geojson['features'])
+            for loc in trace.locations:
+                assert loc in geojson_names
+
+    def test_choropleth_z_values(self, clustered_map):
+        """choropleth的z值应为利差均值"""
+        geojson = _load_choropleth_geojson()
+        if geojson:
+            fig = clustered_map.plot_choropleth_map(theme='light')
+            trace = fig.data[0]
+            assert len(trace.z) > 0
+            # z值应在合理范围
+            for z in trace.z:
+                assert z > 30 and z < 150
+
+    def test_choropleth_featureidkey(self, clustered_map):
+        """featureidkey应为properties.name"""
+        geojson = _load_choropleth_geojson()
+        if geojson:
+            fig = clustered_map.plot_choropleth_map(theme='light')
+            assert fig.data[0].featureidkey == 'properties.name'
+
+    def test_choropleth_title_text(self, clustered_map):
+        """choropleth标题应标注Choropleth"""
+        geojson = _load_choropleth_geojson()
+        if geojson:
+            fig = clustered_map.plot_choropleth_map(theme='light')
+            assert 'Choropleth' in fig.layout.title.text
+        else:
+            fig = clustered_map.plot_choropleth_map(theme='light')
+            assert '气泡地图' in fig.layout.title.text
+
+    def test_choropleth_dark_colorscale(self):
+        """暗色色阶应返回5个色阶段"""
+        colorscale = _get_choropleth_colorscale('dark')
+        assert len(colorscale) == 5
+        assert colorscale[0][0] == 0
+        assert colorscale[-1][0] == 1
+
+    def test_choropleth_light_colorscale(self):
+        """亮色色阶应返回5个色阶段"""
+        colorscale = _get_choropleth_colorscale('light')
+        assert len(colorscale) == 5
+
+    def test_bubble_fallback_title(self, clustered_map):
+        """气泡地图降级标题应标注气泡地图"""
+        # Mock GeoJSON unavailable by testing the _plot_bubble_map directly
+        config = _get_theme_config('light')
+        fig = clustered_map._plot_bubble_map(config, 'light')
+        assert '气泡地图' in fig.layout.title.text
+
+    def test_bubble_fallback_trace_type(self, clustered_map):
+        """气泡地图降级应使用scattergeo"""
+        config = _get_theme_config('light')
+        fig = clustered_map._plot_bubble_map(config, 'light')
+        assert fig.data[0].type == 'scattergeo'
+
+    def test_choropleth_with_cluster_hover(self, clustered_map):
+        """有聚类结果时hover应包含簇信息"""
+        geojson = _load_choropleth_geojson()
+        if geojson:
+            fig = clustered_map.plot_choropleth_map(theme='light')
+            trace = fig.data[0]
+            # 文本中应包含簇信息
+            for text in trace.text:
+                assert '簇' in text or '利差' in text

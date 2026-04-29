@@ -48,7 +48,7 @@ Quinn Liu is a senior fixed income investment professional with 8+ years of expe
 ✅ **交互式Dashboard 2.0** (v3.0重构):
 - 多页面Streamlit架构 (app.py + pages/)
 - 市场状态仪表盘 (5指标加权融合)
-- 省份聚类地图 (31省层次聚类 + 地理分布)
+- 省份聚类地图 (31省层次聚类 + Choropleth地理分布)
 - 深色/浅色双主题切换
 - 情景分析（压力测试、蒙特卡洛模拟）
 - 风险预警系统
@@ -93,6 +93,8 @@ CNLocalGovSpread/
 │   ├── content.py                # 计量经济学教育内容
 │   ├── export.py                 # 数据导出
 │   └── report.py                 # 战略报告生成
+├── data/
+│   └── china_provinces.geojson   # 省级边界GeoJSON (Choropleth地图)
 ├── notebooks/
 │   └── analysis.ipynb            # 主分析Notebook
 ├── tests/
@@ -102,7 +104,7 @@ CNLocalGovSpread/
 │   ├── test_calibration.py       # 参数校准测试 (39)
 │   ├── test_figarch.py           # FIGARCH测试 (23)
 │   ├── test_market_status.py     # 市场状态测试 (37)
-│   ├── test_province_cluster.py  # 省份聚类测试 (43)
+│   ├── test_province_cluster.py  # 省份聚类测试 (57, 含Choropleth)
 │   ├── test_alerts.py            # 预警系统测试 (37)
 │   ├── test_scenarios.py         # 情景分析测试 (56)
 │   ├── test_visualization.py     # 可视化测试 (80)
@@ -137,7 +139,7 @@ pip install -r requirements.txt
 ### 运行测试
 
 ```bash
-# 全部测试 (551个)
+# 全部测试 (565个)
 pytest tests/ -v
 
 # CI友好运行器 (6种模式)

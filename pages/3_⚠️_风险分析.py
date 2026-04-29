@@ -1,5 +1,5 @@
 """
-风险分析页面 - 极值理论VaR/ES
+风险分析页面 - 极值理论VaR/ES + 省级风险聚类
 """
 
 import sys
@@ -12,6 +12,7 @@ from shared_state import (
     plot_tail_risk, render_metric_interpretation,
     render_page_header
 )
+from province_cluster import ProvinceClusterMap
 
 # ============================================================================
 # 页面初始化
@@ -79,6 +80,47 @@ if results:
         | σ (尺度) | {sigma:.4f} | 尾部衰减速度 |
 
         **结论**: {f'ξ = {xi:.4f} > 0，收益分布具有厚尾特征，极端损失发生概率高于正态分布预测。风险管理应采用EVT方法，而非传统正态假设。' if xi > 0 else '尾部特征不明显，可考虑简化模型。'}
-        """)
+        """")
+
+    # ============================================================================
+    # 省级利差风险聚类
+    # ============================================================================
+    st.divider()
+    st.markdown("### 🗺️ 省级利差风险聚类")
+
+    st.info("""
+    **📖 省级风险聚类**: 基于利差特征向量对31省进行层次聚类，
+    识别不同区域的利差模式与风险等级差异。
+    """)
+
+    pcm = ProvinceClusterMap(n_clusters=4)
+    pcm.run_clustering()
+
+    # Choropleth地图 + 雷达图
+    map_col, radar_col = st.columns([3, 2])
+    with map_col:
+        geo_fig = pcm.plot_choropleth_map(theme='light' if theme != 'dark' else 'dark')
+        st.plotly_chart(geo_fig, use_container_width=True)
+    with radar_col:
+        cluster_radar = pcm.plot_cluster_comparison(theme='light' if theme != 'dark' else 'dark')
+        st.plotly_chart(cluster_radar, use_container_width=True)
+
+    # 聚类摘要指标
+    cluster_stats = pcm.get_cluster_stats()
+    summary_cols = st.columns(4)
+    for i, (c, s) in enumerate(cluster_stats.items()):
+        with summary_cols[i]:
+            risk_icon = {'高风险': '🔴', '中等风险': '🟡', '低风险': '🔵', '极低风险': '🟢'}
+            icon = risk_icon.get(s['risk_level'], '⚪')
+            st.metric(
+                f"{icon} 簇{c}",
+                f"{s['n_provinces']}省 | {s['risk_level']}",
+                f"均值 {s['mean_spread_avg']:.1f} bps"
+            )
+
+    # 热力图 (展开查看)
+    with st.expander("🔍 查看省级聚类热力图详情"):
+        heatmap_fig = pcm.plot_cluster_heatmap(theme='light' if theme != 'dark' else 'dark')
+        st.plotly_chart(heatmap_fig, use_container_width=True)
 
 render_app_footer()
