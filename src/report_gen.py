@@ -111,10 +111,10 @@ class ReportGenerator:
     def _prepare_report_data(self, clean_data, returns, kalman, vol_modeler, evt, sections):
         """准备报告数据"""
         data = {}
+        spread = clean_data['spread']
 
         # 数据概览
         if '数据概览' in sections:
-            spread = clean_data['spread']
             data['overview'] = {
                 '数据范围': f"{clean_data.index[0].strftime('%Y-%m-%d')} 至 {clean_data.index[-1].strftime('%Y-%m-%d')}",
                 '交易日数': len(clean_data),
