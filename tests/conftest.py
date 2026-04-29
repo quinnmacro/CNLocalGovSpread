@@ -16,7 +16,10 @@ import os
 from unittest.mock import MagicMock
 
 # 全局 sys.path 配置 - 所有测试文件无需单独插入
+# 添加 src 目录 (支持 from xxx import 模式)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+# 添加项目根目录 (支持 from src.xxx import 模式)
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 
 # ============================================================================

@@ -11,6 +11,10 @@ report_gen.py 测试 - 报告生成模块
 - DISCLAIMER 常量
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 import pytest
 import os
 import json

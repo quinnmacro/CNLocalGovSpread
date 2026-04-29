@@ -8,6 +8,10 @@ export.py 测试 - 数据导出模块
 - 风险指标Sheet
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 import pytest
 import os
 import numpy as np

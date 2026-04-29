@@ -35,6 +35,20 @@ from .calibration import ParameterCalibrator
 from .market_status import MarketStatusGauge
 from .province_cluster import ProvinceClusterMap
 from .report_gen import ReportGenerator, TEMPLATES
+from .export import export_to_excel
+from .styles import (
+    metric_card,
+    alert_box,
+    section_header,
+    apply_theme,
+    render_page_header,
+    render_footer,
+)
+from .content import (
+    get_spread_position_comment,
+    get_volatility_comment,
+    get_var_comment,
+)
 
 __version__ = '3.0.0'
 __author__ = 'Quinn Liu'
@@ -61,5 +75,14 @@ __all__ = [
     'ProvinceClusterMap',
     'ReportGenerator',
     'TEMPLATES',
-    'export_to_excel'
+    'export_to_excel',
+    'metric_card',
+    'alert_box',
+    'section_header',
+    'apply_theme',
+    'render_page_header',
+    'render_footer',
+    'get_spread_position_comment',
+    'get_volatility_comment',
+    'get_var_comment',
 ]

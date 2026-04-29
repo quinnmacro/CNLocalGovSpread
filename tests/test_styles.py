@@ -6,6 +6,10 @@ styles.py 测试 - Streamlit渲染辅助函数
 - render_page_header, render_footer
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 import pytest
 from unittest.mock import patch, MagicMock
 

@@ -9,6 +9,10 @@ visualization.py 测试 - 交互式图表模块
 - plot_credit_spread_comparison, plot_spread_premium_analysis
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 import pytest
 import numpy as np
 import pandas as pd

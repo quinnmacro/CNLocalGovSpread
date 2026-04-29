@@ -9,6 +9,10 @@ content.py 测试 - 纯辅助函数
 Streamlit渲染函数不在测试范围内 (需要st运行环境)
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 import pytest
 
 from src.content import (
