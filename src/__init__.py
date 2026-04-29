@@ -30,9 +30,9 @@ from .visualization import (
     plot_spread_premium_analysis
 )
 from .report import generate_strategic_report
-from .export import export_to_excel
+from .ml_volatility import MLVolatilityModeler
 
-__version__ = '2.4.0'
+__version__ = '3.0.0-dev'
 __author__ = 'Quinn Liu'
 
 __all__ = [
@@ -51,5 +51,6 @@ __all__ = [
     'plot_credit_spread_comparison',
     'plot_spread_premium_analysis',
     'generate_strategic_report',
+    'MLVolatilityModeler',
     'export_to_excel'
 ]
