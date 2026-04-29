@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Phase 3: Test Coverage & Documentation
 
 #### Added
-- **Expanded test suite from 17 tests to 843 tests** across 19 test files:
+- **Expanded test suite from 17 tests to 893 tests** across 20 test files:
   - `test_all.py` (17) - original core module tests
   - `test_ml_volatility.py` (15) - ML volatility module tests
   - `test_calibration.py` (39) - parameter calibration tests
@@ -59,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `test_export.py` (16) - Excel export tests
   - `test_dashboard_integration.py` (67) - dashboard integration tests (incl. calibration pipeline + signal page)
   - `test_volatility.py` (102) - VolatilityModeler and RegimeDetector tests (init, fit_garch/egarch/gjr_garch/ewma, tournament, conditional volatility, parameter diagnostics, regime detection, model properties, boundary, integration)
+  - `test_report.py` (50) - generate_strategic_report tests (model tournament output, asymmetry sections, risk status labels, volatility regime, action recommendations, boundary conditions, full pipeline integration)
   - `conftest.py` - shared pytest fixtures (15 factories + 3 mock fixtures + markers)
 
 - **CI-friendly test runner** (`run_tests.sh`) with 6 modes: all/quick/coverage/integration/dashboard/smoke/count
