@@ -41,10 +41,15 @@ class VolatilityModeler:
             # 我们设成 1e-4 牺牲一点精度换取稳定性
             result = model.fit(disp='off', options={'ftol': 1e-4, 'maxiter': 500})
 
+            # P0修复: 检查收敛状态（arch库使用convergence_flag，0=成功）
+            converged = result.convergence_flag == 0
+            if not converged:
+                print(f"   ⚠️ GARCH 优化未收敛（可能影响参数准确性）")
+
             self.models['GARCH'] = model
             self.results['GARCH'] = result
-            self.ic_scores['GARCH'] = {'AIC': result.aic, 'BIC': result.bic}
-            print(f"   AIC={result.aic:.2f}, BIC={result.bic:.2f}")
+            self.ic_scores['GARCH'] = {'AIC': result.aic, 'BIC': result.bic, 'converged': converged}
+            print(f"   AIC={result.aic:.2f}, BIC={result.bic:.2f}, 收敛={converged}")
 
         except Exception as e:
             print(f"   ✗ GARCH 拟合失败: {str(e)}")
@@ -57,10 +62,15 @@ class VolatilityModeler:
             model = arch_model(self.returns, vol='EGARCH', p=self.p, q=self.q, dist='t')
             result = model.fit(disp='off', options={'ftol': 1e-4, 'maxiter': 500})
 
+            # P0修复: 检查收敛状态（arch库使用convergence_flag，0=成功）
+            converged = result.convergence_flag == 0
+            if not converged:
+                print(f"   ⚠️ EGARCH 优化未收敛（可能影响参数准确性）")
+
             self.models['EGARCH'] = model
             self.results['EGARCH'] = result
-            self.ic_scores['EGARCH'] = {'AIC': result.aic, 'BIC': result.bic}
-            print(f"   AIC={result.aic:.2f}, BIC={result.bic:.2f}")
+            self.ic_scores['EGARCH'] = {'AIC': result.aic, 'BIC': result.bic, 'converged': converged}
+            print(f"   AIC={result.aic:.2f}, BIC={result.bic:.2f}, 收敛={converged}")
 
             # P0修复: arch库的EGARCH实现是对称模型，不包含非对称gamma参数
             # 若需要非对称效应分析，请使用GJR-GARCH模型（fit_gjr_garch方法）
@@ -79,10 +89,15 @@ class VolatilityModeler:
             model = arch_model(self.returns, vol='Garch', p=self.p, o=1, q=self.q, dist='t')
             result = model.fit(disp='off', options={'ftol': 1e-4, 'maxiter': 500})
 
+            # P0修复: 检查收敛状态（arch库使用convergence_flag，0=成功）
+            converged = result.convergence_flag == 0
+            if not converged:
+                print(f"   ⚠️ GJR-GARCH 优化未收敛（可能影响参数准确性）")
+
             self.models['GJR-GARCH'] = model
             self.results['GJR-GARCH'] = result
-            self.ic_scores['GJR-GARCH'] = {'AIC': result.aic, 'BIC': result.bic}
-            print(f"   AIC={result.aic:.2f}, BIC={result.bic:.2f}")
+            self.ic_scores['GJR-GARCH'] = {'AIC': result.aic, 'BIC': result.bic, 'converged': converged}
+            print(f"   AIC={result.aic:.2f}, BIC={result.bic:.2f}, 收敛={converged}")
 
         except Exception as e:
             print(f"   ✗ GJR-GARCH 拟合失败: {str(e)}")
@@ -162,7 +177,7 @@ class VolatilityModeler:
             bic = np.log(valid_count) * 2 - 2 * log_likelihood
 
         self.models['EWMA'] = {'volatility': ewma_volatility, 'lambda': lambda_param, 'df': df if valid_count >= 10 else 5.0}
-        self.ic_scores['EWMA'] = {'AIC': aic, 'BIC': bic}
+        self.ic_scores['EWMA'] = {'AIC': aic, 'BIC': bic, 'converged': True}  # EWMA无需优化迭代
 
         print(f"   λ = {lambda_param} (RiskMetrics 标准)")
         if valid_count >= 10:
@@ -208,6 +223,42 @@ class VolatilityModeler:
             # conditional_volatility 是 GARCH 模型的核心输出
             # 它告诉我们「在给定历史信息下，今天的预期波动率是多少」
             return self.results[model_name].conditional_volatility
+
+    def get_parameter_diagnostics(self, model_name):
+        """
+        P0修复: 获取模型参数诊断信息（t统计量、p值、标准误差）
+
+        参数显著性检验是验证模型质量的关键步骤：
+        - t统计量 > 2 表示参数在95%水平显著
+        - p值 < 0.05 表示参数统计显著
+        """
+        if model_name not in self.results:
+            return None
+
+        result = self.results[model_name]
+
+        # arch库的结果对象提供参数汇总表
+        try:
+            summary = result.summary()
+            # 提取参数名、估计值、标准误差、t统计量、p值
+            params = result.params
+            pvalues = result.pvalues
+            std_errors = result.std_err
+
+            diagnostics = {}
+            for param_name in params.index:
+                t_stat = params[param_name] / std_errors[param_name] if std_errors[param_name] > 0 else np.inf
+                diagnostics[param_name] = {
+                    'estimate': params[param_name],
+                    'std_error': std_errors[param_name],
+                    't_stat': t_stat,
+                    'p_value': pvalues[param_name],
+                    'significant': pvalues[param_name] < 0.05
+                }
+
+            return diagnostics
+        except Exception:
+            return None
 
 
 class RegimeDetector:
