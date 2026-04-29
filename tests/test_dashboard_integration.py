@@ -117,6 +117,27 @@ class TestModuleImports:
         for name in expected_exports:
             assert hasattr(src, name), f"{name} not exported from src"
 
+    def test_shared_state_imports_ml_calibration(self):
+        """验证 shared_state.py 导入 MLVolatilityModeler 和 ParameterCalibrator"""
+        shared_path = os.path.join(
+            os.path.dirname(__file__), '..', 'shared_state.py'
+        )
+        with open(shared_path, 'r') as f:
+            content = f.read()
+        assert 'MLVolatilityModeler' in content
+        assert 'ParameterCalibrator' in content
+
+    def test_shared_state_figarch_in_pipeline(self):
+        """验证 shared_state.py 包含 FIGARCH 长记忆检测步骤"""
+        shared_path = os.path.join(
+            os.path.dirname(__file__), '..', 'shared_state.py'
+        )
+        with open(shared_path, 'r') as f:
+            content = f.read()
+        assert 'detect_long_memory' in content
+        assert 'fit_figarch' in content
+        assert 'long_memory' in content
+
 
 # ============================================================================
 # 全工作流集成测试
@@ -454,6 +475,63 @@ class TestCrossModuleInteraction:
         assert garch_winner is not None
         assert isinstance(comparison, dict)
         assert 'RF' in comparison
+
+    def test_full_v3_pipeline_garch_ml_figarch_calibration(self, mock_config):
+        """v3.0完整管线: GARCH → FIGARCH → ML → 校准"""
+        from data_engine import DataEngine
+        from volatility import VolatilityModeler
+        from ml_volatility import MLVolatilityModeler
+        from calibration import ParameterCalibrator
+
+        engine = DataEngine(mock_config)
+        engine.load_data()
+        clean_data = engine.clean_data()
+        returns = engine.get_returns()
+
+        # Step 1: GARCH锦标赛
+        vol_modeler = VolatilityModeler(returns)
+        winner = vol_modeler.run_tournament()
+        assert winner in ['GARCH', 'EGARCH', 'GJR-GARCH', 'EWMA']
+
+        # Step 2: FIGARCH长记忆检测
+        lm_result = vol_modeler.detect_long_memory()
+        assert 'd_estimate' in lm_result
+        assert 'memory_type' in lm_result
+
+        # Step 3: ML模型锦标赛
+        ml_modeler = MLVolatilityModeler(returns)
+        ml_comparison, ml_winner = ml_modeler.run_ml_tournament()
+        assert isinstance(ml_comparison, dict)
+        assert ml_winner is not None
+
+        # Step 4: GARCH vs ML对比
+        garch_comparison, overall_winner = ml_modeler.compare_with_garch(vol_modeler.ic_scores)
+        assert isinstance(garch_comparison, pd.DataFrame)
+        assert overall_winner is not None
+
+        # Step 5: 参数自动校准
+        calibrator = ParameterCalibrator(returns, spread=clean_data.get('spread'))
+        calibrator.calibrate_all()
+        calibrated = calibrator.calibrated
+        assert 'ewma_lambda' in calibrated
+        assert 't_df' in calibrated
+        assert 'ar_phi' in calibrated
+
+    def test_figarch_pipeline_with_long_memory(self, long_memory_returns):
+        """长记忆数据 → FIGARCH检测与拟合完整管线"""
+        from volatility import VolatilityModeler
+
+        modeler = VolatilityModeler(long_memory_returns)
+        winner = modeler.run_tournament()
+
+        lm_result = modeler.detect_long_memory()
+        d = lm_result['d_estimate']
+
+        # 如果检测到显著长记忆，拟合FIGARCH
+        if d > 0.05 and lm_result.get('d_p_value', 1) < 0.10:
+            figarch_result = modeler.fit_figarch()
+            assert 'd' in figarch_result
+            assert 'AIC' in figarch_result
 
 
 # ============================================================================

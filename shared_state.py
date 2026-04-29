@@ -21,6 +21,8 @@ from data_engine import DataEngine
 from volatility import VolatilityModeler, RegimeDetector
 from kalman import KalmanSignalExtractor
 from evt import EVTRiskAnalyzer
+from ml_volatility import MLVolatilityModeler
+from calibration import ParameterCalibrator
 from visualization import (
     plot_signal_trend,
     plot_volatility_structure,
@@ -251,6 +253,58 @@ def ensure_analysis(config, run_analysis):
             st.session_state.var = returns.quantile(config['VaR_CONFIDENCE'])
             st.session_state.es = returns.quantile(0.999)
 
+        # FIGARCH长记忆检测
+        if need_load:
+            load_placeholder.update(label="🔍 检测波动率长记忆...")
+        try:
+            lm_result = vol_modeler.detect_long_memory()
+            st.session_state.long_memory = lm_result
+        except Exception as e:
+            st.session_state.long_memory = None
+
+        # FIGARCH模型拟合 (如果检测到长记忆)
+        if need_load:
+            load_placeholder.update(label="📉 拟合FIGARCH模型...")
+        try:
+            if st.session_state.long_memory and st.session_state.long_memory.get('d_estimate', 0) > 0.05:
+                figarch_result = vol_modeler.fit_figarch()
+                st.session_state.figarch = figarch_result
+            else:
+                st.session_state.figarch = None
+        except Exception as e:
+            st.session_state.figarch = None
+
+        # ML波动率模型锦标赛
+        if need_load:
+            load_placeholder.update(label="🤖 运行ML模型锦标赛...")
+        try:
+            ml_modeler = MLVolatilityModeler(returns)
+            ml_comparison, ml_winner = ml_modeler.run_ml_tournament()
+            garch_comparison_df, garch_overall_winner = ml_modeler.compare_with_garch(vol_modeler.ic_scores)
+            st.session_state.ml_modeler = ml_modeler
+            st.session_state.ml_comparison = ml_comparison
+            st.session_state.ml_winner = ml_winner
+            st.session_state.garch_comparison = garch_comparison_df
+            st.session_state.garch_overall_winner = garch_overall_winner
+        except Exception as e:
+            st.session_state.ml_modeler = None
+            st.session_state.ml_comparison = None
+            st.session_state.ml_winner = None
+            st.session_state.garch_comparison = None
+            st.session_state.garch_overall_winner = None
+
+        # 参数自动校准
+        if need_load:
+            load_placeholder.update(label="⚙️ 参数自动校准...")
+        try:
+            calibrator = ParameterCalibrator(returns, spread=clean_data.get('spread'))
+            calibrator.calibrate_all()
+            st.session_state.calibrator = calibrator
+            st.session_state.calibrated = calibrator.calibrated
+        except Exception as e:
+            st.session_state.calibrator = None
+            st.session_state.calibrated = None
+
         st.session_state.analysis_done = True
 
         if need_load:
@@ -274,6 +328,15 @@ def get_results():
         'evt': st.session_state.evt,
         'var': st.session_state.var,
         'es': st.session_state.es,
+        'long_memory': st.session_state.long_memory,
+        'figarch': st.session_state.figarch,
+        'ml_modeler': st.session_state.ml_modeler,
+        'ml_comparison': st.session_state.ml_comparison,
+        'ml_winner': st.session_state.ml_winner,
+        'garch_comparison': st.session_state.garch_comparison,
+        'garch_overall_winner': st.session_state.garch_overall_winner,
+        'calibrator': st.session_state.calibrator,
+        'calibrated': st.session_state.calibrated,
     }
 
 
