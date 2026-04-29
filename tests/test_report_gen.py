@@ -22,6 +22,7 @@ from datetime import datetime
 from src.report_gen import (
     ReportGenerator,
     DISCLAIMER,
+    TEMPLATES,
     generate_report,
     get_report_history,
     generate_quick_report,
@@ -500,3 +501,274 @@ class TestConvenienceFunctions:
             with patch.object(ReportGenerator, 'generate_report', return_value='/tmp/quick.html') as mock_gen:
                 result = generate_quick_report(clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt)
                 assert mock_gen.called
+
+
+# ============================================================================
+# TEMPLATES
+# ============================================================================
+
+class TestTemplates:
+
+    def test_templates_dict_exists(self):
+        assert isinstance(TEMPLATES, dict)
+        assert len(TEMPLATES) >= 3
+
+    def test_professional_template(self):
+        assert 'professional' in TEMPLATES
+        t = TEMPLATES['professional']
+        assert t['name'] == '专业版'
+        assert t['primary_color'].startswith('#')
+        assert 'title_font_size' in t
+
+    def test_academic_template(self):
+        assert 'academic' in TEMPLATES
+        t = TEMPLATES['academic']
+        assert t['name'] == '学术版'
+        assert 'table_header_bg' in t
+
+    def test_executive_template(self):
+        assert 'executive' in TEMPLATES
+        t = TEMPLATES['executive']
+        assert t['name'] == '高管简版'
+        assert t['title_font_size'] >= TEMPLATES['professional']['title_font_size']
+
+    def test_template_required_keys(self):
+        required_keys = ['name', 'description', 'primary_color', 'secondary_color',
+                         'accent_color', 'bg_color', 'text_color', 'title_font_size',
+                         'heading_font_size', 'body_font_size', 'table_header_bg',
+                         'disclaimer_bg', 'disclaimer_border']
+        for key, tmpl in TEMPLATES.items():
+            for rk in required_keys:
+                assert rk in tmpl, f"Template '{key}' missing key '{rk}'"
+
+    def test_template_colors_are_hex(self):
+        color_keys = ['primary_color', 'secondary_color', 'accent_color',
+                      'bg_color', 'text_color', 'table_header_bg',
+                      'disclaimer_bg', 'disclaimer_border']
+        for key, tmpl in TEMPLATES.items():
+            for ck in color_keys:
+                assert tmpl[ck].startswith('#'), f"Template '{key}' color '{ck}' not hex"
+
+
+# ============================================================================
+# Template selection in generate_report
+# ============================================================================
+
+class TestTemplateSelection:
+
+    def test_default_template_is_professional(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        path = generator.generate_report(
+            clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+            format="HTML"
+        )
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        assert '专业版' in content
+
+    def test_academic_template_in_html(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        path = generator.generate_report(
+            clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+            format="HTML", template='academic'
+        )
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        assert '学术版' in content
+        assert '#2c3e50' in content
+
+    def test_executive_template_in_html(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        path = generator.generate_report(
+            clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+            format="HTML", template='executive'
+        )
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        assert '高管简版' in content
+        assert '#e74c3c' in content
+
+    def test_invalid_template_raises(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        with pytest.raises(ValueError, match='不支持的模板'):
+            generator.generate_report(
+                clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+                format="HTML", template='nonexistent'
+            )
+
+    def test_template_stored_on_generator(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        generator.generate_report(
+            clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+            format="HTML", template='academic'
+        )
+        assert generator.template == TEMPLATES['academic']
+
+    def test_template_applies_font_sizes(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        path = generator.generate_report(
+            clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+            format="HTML", template='executive'
+        )
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        assert '22px' in content  # executive title_font_size
+
+    def test_template_in_convenience_function(self, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        with patch.object(ReportGenerator, '__init__', return_value=None):
+            with patch.object(ReportGenerator, 'generate_report', return_value='/tmp/test.html') as mock_gen:
+                result = generate_report(
+                    clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+                    template='academic'
+                )
+                call_kwargs = mock_gen.call_args[1]
+                assert call_kwargs['template'] == 'academic'
+
+
+# ============================================================================
+# PPT generation
+# ============================================================================
+
+class TestPPTGeneration:
+
+    def test_ppt_format_generates_file(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        try:
+            from pptx import Presentation
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        path = generator.generate_report(
+            clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+            format="PPT"
+        )
+        assert path.endswith('.pptx')
+        assert os.path.exists(path)
+
+    def test_ppt_has_multiple_slides(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        try:
+            from pptx import Presentation
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        path = generator.generate_report(
+            clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+            format="PPT", sections=['数据概览', '风险分析']
+        )
+        prs = Presentation(path)
+        # Title slide + 2 section slides + disclaimer slide = 4
+        assert len(prs.slides) >= 4
+
+    def test_ppt_title_slide_content(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        try:
+            from pptx import Presentation
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        path = generator.generate_report(
+            clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+            format="PPT", title="测试PPT报告"
+        )
+        prs = Presentation(path)
+        title_text = prs.slides[0].shapes.title.text
+        assert '测试PPT报告' == title_text
+
+    def test_ppt_subtitle_has_version(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        try:
+            from pptx import Presentation
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        path = generator.generate_report(
+            clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+            format="PPT"
+        )
+        prs = Presentation(path)
+        subtitle_text = prs.slides[0].placeholders[1].text
+        assert 'v3.0.0' in subtitle_text
+
+    def test_ppt_disclaimer_slide(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        try:
+            from pptx import Presentation
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        path = generator.generate_report(
+            clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+            format="PPT", sections=['数据概览']
+        )
+        prs = Presentation(path)
+        # Last slide should be disclaimer
+        last_slide = prs.slides[-1]
+        title_text = last_slide.shapes.title.text
+        assert '免责声明' == title_text
+
+    def test_ppt_with_academic_template(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        try:
+            from pptx import Presentation
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        path = generator.generate_report(
+            clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+            format="PPT", template='academic'
+        )
+        prs = Presentation(path)
+        subtitle_text = prs.slides[0].placeholders[1].text
+        assert '学术版' in subtitle_text
+
+    def test_ppt_executive_has_summary_slide(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        try:
+            from pptx import Presentation
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        path = generator.generate_report(
+            clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+            format="PPT", template='executive',
+            sections=['数据概览', '信号分析', '风险分析']
+        )
+        prs = Presentation(path)
+        # Title + executive summary + 3 sections + disclaimer = 6
+        assert len(prs.slides) >= 6
+
+    def test_ppt_section_slide_content(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        try:
+            from pptx import Presentation
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        path = generator.generate_report(
+            clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+            format="PPT", sections=['数据概览']
+        )
+        prs = Presentation(path)
+        # Slide 1: title, Slide 2: 数据概览, Slide 3: disclaimer
+        section_slide = prs.slides[1]
+        title_text = section_slide.shapes.title.text
+        assert '数据概览' == title_text or 'overview' == title_text
+
+    def test_ppt_pptx_import_fallback(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        # When python-pptx is not available, should fall back to text
+        with patch.dict('sys.modules', {'pptx': None}):
+            data = generator._prepare_report_data(
+                clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+                sections=['数据概览']
+            )
+            generator.template = TEMPLATES['professional']
+            path = generator._generate_ppt(data, "Test", "20200101")
+            assert path.endswith('.txt')
+
+    def test_ppt_history_records_format(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        try:
+            from pptx import Presentation
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        generator.generate_report(
+            clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+            format="PPT"
+        )
+        record = generator.get_history()[0]
+        assert record['format'] == 'PPT'
+        assert record['path'].endswith('.pptx')
+
+    def test_ppt_format_in_error_message(self, generator, clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt):
+        with pytest.raises(ValueError, match='PDF, Excel, HTML, PPT'):
+            generator.generate_report(
+                clean_data, returns, mock_kalman, mock_vol_modeler, mock_evt,
+                format="DOCX"
+            )
