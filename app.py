@@ -22,6 +22,7 @@ from shared_state import (
     get_spread_position_comment, get_volatility_comment, get_var_comment,
     render_page_header
 )
+from market_status import MarketStatusGauge
 import numpy as np
 
 # ============================================================================
@@ -100,6 +101,52 @@ if results:
     alerts = check_risk_alerts(clean_data, returns, evt, results['vol_modeler'])
     risk_score = get_risk_score(alerts)
     st.markdown(f"**风险状态**: {risk_score['level']} | 🔴 {risk_score['danger_count']} | 🟡 {risk_score['warning_count']} | 🟢 {risk_score['total_alerts'] - risk_score['danger_count'] - risk_score['warning_count']}")
+
+    # =========================================================================
+    # 市场状态仪表 + 指标联动雷达图
+    # =========================================================================
+    gauge = MarketStatusGauge(
+        clean_data, returns,
+        smoothed=results['smoothed'],
+        deviation=deviation,
+        vol_modeler=results['vol_modeler'],
+        evt=evt
+    )
+    gauge_status = gauge.get_market_status()
+
+    st.markdown("#### 🎛️ 市场状态仪表")
+    gauge_col, radar_col = st.columns([3, 2])
+    with gauge_col:
+        gauge_fig = gauge.plot_status_gauge(theme='light' if theme != 'dark' else 'dark')
+        st.plotly_chart(gauge_fig, use_container_width=True)
+    with radar_col:
+        radar_fig = gauge.plot_indicator_linkage(theme='light' if theme != 'dark' else 'dark')
+        st.plotly_chart(radar_fig, use_container_width=True)
+
+    # 指标详情
+    indicator_details = gauge._indicator_scores
+    detail_cols = st.columns(5)
+    indicator_names = {
+        'spread_position': '利差定位',
+        'volatility_regime': '波动率状态',
+        'var_breach': 'VaR突破',
+        'signal_deviation': '信号偏离',
+        'trend_momentum': '趋势动量'
+    }
+    for i, (key, name) in enumerate(indicator_names.items()):
+        with detail_cols[i]:
+            score = indicator_details[key]['score']
+            if score < 20:
+                icon = '🟢'
+            elif score < 40:
+                icon = '🔵'
+            elif score < 60:
+                icon = '🟡'
+            elif score < 80:
+                icon = '🟠'
+            else:
+                icon = '🔴'
+            st.metric(f"{icon} {name}", f"{score:.0f}")
 
     # =========================================================================
     # 快速解读卡片

@@ -32,6 +32,7 @@ from .visualization import (
 from .report import generate_strategic_report
 from .ml_volatility import MLVolatilityModeler
 from .calibration import ParameterCalibrator
+from .market_status import MarketStatusGauge
 
 __version__ = '3.0.0-dev'
 __author__ = 'Quinn Liu'
@@ -54,5 +55,6 @@ __all__ = [
     'generate_strategic_report',
     'MLVolatilityModeler',
     'ParameterCalibrator',
+    'MarketStatusGauge',
     'export_to_excel'
 ]
