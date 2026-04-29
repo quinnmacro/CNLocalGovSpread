@@ -112,6 +112,8 @@ CNLocalGovSpread/
 │   ├── test_content.py           # 内容辅助函数测试 (26)
 │   ├── test_styles.py            # 主题样式测试 (30)
 │   ├── test_export.py            # 数据导出测试 (16)
+│   ├── test_kalman.py            # 卡尔曼滤波器测试 (41)
+│   ├── test_evt.py               # 极值理论测试 (60)
 │   ├── test_dashboard_integration.py # Dashboard集成测试 (67)
 │   └── run_tests.sh              # CI友好测试运行器
 ├── CHANGELOG.md                  # 版本变更记录 (v3.0)
@@ -139,7 +141,7 @@ pip install -r requirements.txt
 ### 运行测试
 
 ```bash
-# 全部测试 (581个)
+# 全部测试 (682个)
 pytest tests/ -v
 
 # CI友好运行器 (6种模式)
