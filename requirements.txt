@@ -34,6 +34,12 @@ scikit-learn>=0.24.0        # For additional statistical tools (optional)
 #                # 或从 Wind 官网下载安装包
 
 # ============================================================================
+# Machine Learning (v3.0 新增)
+xgboost>=1.5.0                # Gradient boosting for volatility prediction
+# tensorflow>=2.8.0           # LSTM model (取消注释以启用，需要较长安装时间)
+python-pptx>=0.6.0            # PowerPoint report generation
+reportlab>=3.6.0              # PDF report generation
+
 # Development Tools
 # ============================================================================
 pytest>=6.2.0              # Unit testing

@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 
 # ============================================================================
@@ -489,8 +488,7 @@ def plot_tenor_spread_correlation(df, columns=None, theme='light'):
         textfont={'size': 14, 'color': 'white'},
         hoverongaps=False,
         colorbar=dict(
-            title='相关系数',
-            titlefont=dict(color=config['font_color']),
+            title=dict(text='相关系数', font=dict(color=config['font_color'])),
             tickfont=dict(color=config['font_color'])
         )
     ))

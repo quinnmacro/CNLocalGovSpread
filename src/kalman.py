@@ -25,7 +25,13 @@ class KalmanSignalExtractor:
         self.smoothed_state = None
         self.success = False
 
-    def fit(self):
+    def fit(self, fallback_window=60):
+        """
+        拟合卡尔曼滤波器
+
+        参数:
+        - fallback_window: 失败时滚动均值窗口 (默认60, 可由参数校准提供)
+        """
         """
         拟合 Local Level Model (随机游走 + 噪音)
 
@@ -70,7 +76,7 @@ class KalmanSignalExtractor:
             # Fallback: 简单移动平均
             # 60 天窗口的选择：对应一个季度的财报周期
             # 太短（如 20 天）会追踪噪音，太长（如 120 天）反应太慢
-            self.smoothed_state = self.spread.rolling(window=60, min_periods=1).mean()
+            self.smoothed_state = self.spread.rolling(window=fallback_window, min_periods=1).mean()
             self.success = False
 
         return self.smoothed_state

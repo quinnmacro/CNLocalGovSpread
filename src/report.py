@@ -2,8 +2,6 @@
 战略报告生成模块 - 自动生成可执行的交易建议和风险预警
 """
 
-import numpy as np
-
 
 def generate_strategic_report(
     winner_model,
@@ -46,17 +44,18 @@ def generate_strategic_report(
 
     asymmetry_detected = False
     if winner_model == 'EGARCH':
-        gamma = vol_modeler.results['EGARCH'].params.get('gamma[1]', 0)
-        if gamma < -0.05:  # 显著负值
-            print(f"  ✓ 检测到显著的不对称效应 (γ = {gamma:.4f})")
-            print(f"    → 利差扩大（坏消息）引发的波动率上升幅度 > 利差收窄（好消息）")
-            print(f"    → 这符合信用市场的经验：投资者对负面信息反应更剧烈")
+        # P0修复: arch库EGARCH不含显式gamma参数，非对称性通过|z_t|项隐式体现
+        # 无法直接提取gamma值，需参考GJR-GARCH结果获取显式非对称性度量
+        gjr_gamma = None
+        if 'GJR-GARCH' in vol_modeler.results:
+            gjr_gamma = vol_modeler.results['GJR-GARCH'].params.get('gamma[1]', 0)
+        if gjr_gamma is not None and gjr_gamma > 0.05:
+            print(f"  ✓ 参考GJR-GARCH结果: 检测到显著杠杆效应 (γ = {gjr_gamma:.4f})")
+            print(f"    → EGARCH通过|z_t|项隐式捕捉非对称性，GJR-GARCH γ={gjr_gamma:.4f}确认该效应")
             asymmetry_detected = True
-        elif gamma > 0.05:
-            print(f"  ⚠️  检测到反常的正不对称 (γ = {gamma:.4f})")
-            print(f"    → 这在信用利差中较罕见,可能反映特殊的市场结构")
         else:
-            print(f"  ℹ️  不对称效应不显著 (γ ≈ 0)")
+            print(f"  ℹ️  EGARCH的非对称性通过|z_t|项隐式体现（arch库不含显式γ参数）")
+            print(f"    → 若需显式非对称效应度量，请参考GJR-GARCH模型结果")
 
     elif winner_model == 'GJR-GARCH':
         gamma = vol_modeler.results['GJR-GARCH'].params.get('gamma[1]', 0)

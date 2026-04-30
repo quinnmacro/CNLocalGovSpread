@@ -118,8 +118,8 @@ class DataEngine:
         # - alpha + beta 接近 1：波动率聚集效应明显
         phi = 0.98  # AR(1) 系数 - 高持久性
         mu = 100    # 长期均值 100 bps
-        omega = 0.5 # GARCH 常数项
-        alpha = 0.15 # ARCH 效应
+        omega = 0.5  # GARCH 常数项
+        alpha = 0.15  # ARCH 效应
         beta = 0.80  # GARCH 效应
 
         for t in range(1, n):

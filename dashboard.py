@@ -1,6 +1,6 @@
 """
-中国地方债利差分析仪表板
-Streamlit 现代化版本 v2.5 - 专业金融分析界面
+中国地方债利差分析仪表板 - 单页版本 (legacy)
+推荐使用多页版本: streamlit run app.py
 
 功能模块:
 1. 首页仪表板 - 关键指标与迷你图表
@@ -11,16 +11,14 @@ Streamlit 现代化版本 v2.5 - 专业金融分析界面
 6. 历史回溯 - 滚动统计与事件检测
 7. 报告中心 - 多格式报告生成
 
-v2.5 更新 (P0算法修复):
-- EVT VaR公式修正样本比例因子
-- Kalman sigma2标注修正为状态转移噪音
-- GARCH模拟使用正确残差更新公式
-- 蒙特卡洛采用AR(1)均值回归模型
-- EWMA使用t分布与GARCH可比
-- 可视化VaR标注"利差扩大风险"
-- 添加标准免责声明
+v3.0 多页架构:
+- app.py: 首页仪表板 (推荐入口)
+- shared_state.py: 共享状态管理
+- pages/: 6个独立分析页面
 
-运行方式: streamlit run dashboard.py
+运行方式:
+  推荐: streamlit run app.py         (多页版本)
+  兼容: streamlit run dashboard.py   (单页版本)
 """
 
 import streamlit as st
@@ -676,7 +674,7 @@ if st.session_state.analysis_done:
 # 页脚
 # ============================================================================
 render_footer(
-    version='2.5.0',
+    version='3.0.0',
     author='Quinn Liu',
     github='https://github.com/quinnmacro/CNLocalGovSpread',
     linkedin='https://www.linkedin.com/in/liulu-math'

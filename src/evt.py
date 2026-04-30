@@ -7,6 +7,7 @@
 
 import numpy as np
 from scipy import stats
+import plotly.graph_objects as go
 
 
 class EVTRiskAnalyzer:
@@ -109,9 +110,6 @@ class EVTRiskAnalyzer:
             print(f"⚠️ 形状参数过大 (ξ={shape:.4f})，使用经验分位数")
             self.var = self.returns.quantile(self.confidence)
             return self.var
-
-        # 超过阈值的概率
-        p_exceed = 1 - self.threshold_percentile
 
         # P0修复: 计算样本比例因子 n/N_u
         # 正确的EVT-VaR公式: VaR = u + (σ/ξ) * [((n/N_u) * (1-α))^(-ξ) - 1]
@@ -238,6 +236,115 @@ class EVTRiskAnalyzer:
 
         return self.es
 
+    def mean_excess_plot(self, min_percentile=0.5, max_percentile=0.99, n_points=50):
+        """
+        P0修复: 绘制Mean Excess Plot（均值超额图）辅助阈值选择
+
+        Mean Excess Function (MEF): e(u) = E[X - u | X > u]
+        如果GPD拟合良好，MEF在阈值之上应近似线性
+
+        参数:
+        - min_percentile: 最小百分位起点
+        - max_percentile: 最大百分位终点
+        - n_points: 计算点数
+
+        返回:
+        - dict: {'thresholds': array, 'mean_excess': array, 'optimal_threshold': float}
+        """
+        if self.returns is None:
+            raise ValueError("数据未加载")
+
+        data = self.returns.values
+        thresholds = np.linspace(
+            np.percentile(data, min_percentile * 100),
+            np.percentile(data, max_percentile * 100),
+            n_points
+        )
+
+        mean_excess = []
+        for u in thresholds:
+            exceedances = data[data > u] - u
+            if len(exceedances) > 5:
+                mean_excess.append(np.mean(exceedances))
+            else:
+                mean_excess.append(np.nan)
+
+        mean_excess = np.array(mean_excess)
+
+        # 寻找MEF近似线性的区域起始点（最优阈值）
+        # 方法: 找到MEF开始稳定变化的最低阈值
+        valid_mask = ~np.isnan(mean_excess)
+        if np.sum(valid_mask) > 10:
+            valid_thresh = thresholds[valid_mask]
+            valid_me = mean_excess[valid_mask]
+
+            # 计算MEF变化率（局部斜率），寻找稳定区域
+            diffs = np.diff(valid_me)
+            stable_start = 0
+            for i in range(len(diffs)):
+                # 检查连续5个点的斜率是否相对稳定（方差小）
+                if i + 5 <= len(diffs):
+                    window_var = np.var(diffs[i:i+5])
+                    total_var = np.var(diffs)
+                    if window_var < total_var * 0.5:
+                        stable_start = i
+                        break
+
+            optimal_threshold = valid_thresh[stable_start] if stable_start < len(valid_thresh) else valid_thresh[-1]
+        else:
+            optimal_threshold = np.percentile(data, 95)
+
+        self.mean_excess_data = {
+            'thresholds': thresholds,
+            'mean_excess': mean_excess,
+            'optimal_threshold': optimal_threshold
+        }
+
+        # 绘制交互式图表
+        fig = go.Figure()
+
+        # MEF曲线
+        fig.add_trace(go.Scatter(
+            x=thresholds, y=mean_excess,
+            mode='lines+markers',
+            name='Mean Excess Function',
+            line=dict(color='#2196F3', width=2),
+            marker=dict(size=5)
+        ))
+
+        # 标记最优阈值
+        fig.add_trace(go.Scatter(
+            x=[optimal_threshold],
+            y=[mean_excess[thresholds == optimal_threshold][0] if optimal_threshold in thresholds else np.nan],
+            mode='markers',
+            name='推荐阈值',
+            marker=dict(color='#FF5722', size=12, symbol='diamond')
+        ))
+
+        # 标记当前阈值
+        if self.threshold is not None:
+            current_me = mean_excess[np.argmin(np.abs(thresholds - self.threshold))]
+            fig.add_trace(go.Scatter(
+                x=[self.threshold], y=[current_me],
+                mode='markers',
+                name=f'当前阈值 (P{self.threshold_percentile*100:.0f})',
+                marker=dict(color='#4CAF50', size=12, symbol='star')
+            ))
+
+        fig.update_layout(
+            title='Mean Excess Plot - 阈值选择辅助',
+            xaxis_title='阈值 u',
+            yaxis_title='E[X - u | X > u]',
+            template='plotly_white',
+            height=500
+        )
+
+        print(f"\n  推荐阈值: {optimal_threshold:.2f} bps")
+        print(f"  MEF在该阈值之上近似线性，GPD拟合假设合理")
+
+        return {'fig': fig, 'optimal_threshold': optimal_threshold,
+                'thresholds': thresholds, 'mean_excess': mean_excess}
+
     def estimate_hill(self, k_percentile=0.10):
         """
         使用Hill估计量估计尾部指数
@@ -299,10 +406,13 @@ class EVTRiskAnalyzer:
         hill_xi = log_sum / k if k > 0 else np.inf
 
         # 尾部指数 = 1/ξ
+        # P0修复: Hill估计量仅适用于正xi（重尾分布）
+        # 当xi<0时，分布有有限上界（短尾），不应转换为正数
         if hill_xi > 0:
             hill_tail_index = 1 / hill_xi
         elif hill_xi < 0:
-            hill_tail_index = 1 / abs(hill_xi)  # 使用绝对值避免负数
+            hill_tail_index = -1 / hill_xi  # 负值表示短尾分布
+            print(f"  ⚠️  ξ < 0 表示短尾分布（有上界），Hill估计量可能不适用")
         else:
             hill_tail_index = np.inf
 

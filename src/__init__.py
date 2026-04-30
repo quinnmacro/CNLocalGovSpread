@@ -30,9 +30,57 @@ from .visualization import (
     plot_spread_premium_analysis
 )
 from .report import generate_strategic_report
+from .ml_volatility import MLVolatilityModeler
+from .calibration import ParameterCalibrator
+from .market_status import MarketStatusGauge
+from .province_cluster import ProvinceClusterMap
+from .report_gen import ReportGenerator, TEMPLATES
 from .export import export_to_excel
+from .styles import (
+    metric_card,
+    alert_box,
+    section_header,
+    apply_theme,
+    get_theme_toggle,
+    render_page_header,
+    render_footer,
+)
+from .content import (
+    get_spread_position_comment,
+    get_volatility_comment,
+    get_var_comment,
+    render_quick_reference,
+    render_report_guide,
+    render_metric_interpretation,
+    render_trading_advice,
+)
+from .scenarios import (
+    run_stress_test,
+    run_multi_scenario_stress,
+    run_monte_carlo,
+    plot_mc_simulation,
+    plot_mc_paths,
+    run_sensitivity_analysis,
+    plot_sensitivity_analysis,
+    calculate_rolling_stats,
+    detect_historical_events,
+    plot_rolling_stats,
+    plot_percentile_chart,
+)
+from .alerts import (
+    check_risk_alerts,
+    get_risk_score,
+    generate_alert_history,
+    plot_alert_timeline,
+    plot_risk_gauge,
+    plot_risk_summary,
+    get_default_thresholds,
+    validate_thresholds,
+    format_alert_message,
+    get_alert_summary,
+)
 
-__version__ = '2.4.0'
+__version__ = '3.0.0'
 __author__ = 'Quinn Liu'
 
 __all__ = [
@@ -51,5 +99,46 @@ __all__ = [
     'plot_credit_spread_comparison',
     'plot_spread_premium_analysis',
     'generate_strategic_report',
-    'export_to_excel'
+    'MLVolatilityModeler',
+    'ParameterCalibrator',
+    'MarketStatusGauge',
+    'ProvinceClusterMap',
+    'ReportGenerator',
+    'TEMPLATES',
+    'export_to_excel',
+    'metric_card',
+    'alert_box',
+    'section_header',
+    'apply_theme',
+    'get_theme_toggle',
+    'render_page_header',
+    'render_footer',
+    'get_spread_position_comment',
+    'get_volatility_comment',
+    'get_var_comment',
+    'render_quick_reference',
+    'render_report_guide',
+    'render_metric_interpretation',
+    'render_trading_advice',
+    'run_stress_test',
+    'run_multi_scenario_stress',
+    'run_monte_carlo',
+    'plot_mc_simulation',
+    'plot_mc_paths',
+    'run_sensitivity_analysis',
+    'plot_sensitivity_analysis',
+    'calculate_rolling_stats',
+    'detect_historical_events',
+    'plot_rolling_stats',
+    'plot_percentile_chart',
+    'check_risk_alerts',
+    'get_risk_score',
+    'generate_alert_history',
+    'plot_alert_timeline',
+    'plot_risk_gauge',
+    'plot_risk_summary',
+    'get_default_thresholds',
+    'validate_thresholds',
+    'format_alert_message',
+    'get_alert_summary',
 ]

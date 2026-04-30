@@ -695,7 +695,7 @@ def render_page_header(title, subtitle=None):
         st.markdown(f'<div class="sub-title">{subtitle}</div>', unsafe_allow_html=True)
 
 
-def render_footer(version='2.1.0', author='Quinn Liu', github=None, linkedin=None):
+def render_footer(version='3.0.0', author='Quinn Liu', github=None, linkedin=None):
     """渲染页脚"""
     links = []
     if github:
