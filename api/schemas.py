@@ -318,3 +318,49 @@ class ChangepointResponse(BaseModel):
     breakpoint_dates: list[str] = Field(default_factory=list)
     segments: list[ChangepointSegment] = Field(default_factory=list)
     n_segments: int
+
+
+# --- STS Signal ---
+
+
+class STSSignalResponse(BaseModel):
+    """Response for GET /regimes/sts-signal (Structural Time Series)."""
+
+    signal: list[TimePoint] = Field(default_factory=list)
+    deviation: list[TimePoint] = Field(default_factory=list)
+    deviation_zscore: list[TimePoint] = Field(default_factory=list)
+    signal_strength: float
+    is_overvalued: bool
+    is_undervalued: bool
+    # STS-specific fields
+    level: list[TimePoint] = Field(default_factory=list)
+    slope: list[TimePoint] = Field(default_factory=list)
+    irregular: list[TimePoint] = Field(default_factory=list)
+    aic: float = Field(description="Akaike Information Criterion")
+    bic: float = Field(description="Bayesian Information Criterion")
+    n_params: int = Field(description="Number of estimated parameters")
+    sigma2_level: float = Field(description="Level variance σ²_level")
+    sigma2_trend: float = Field(description="Trend/slope variance σ²_trend")
+    sigma2_irregular: float = Field(description="Irregular/noise variance σ²_irregular")
+
+
+# --- Bayesian STS ---
+
+
+class BayesianSTSResponse(BaseModel):
+    """Response for GET /regimes/bayesian-sts."""
+
+    signal: list[TimePoint] = Field(default_factory=list)
+    deviation: list[TimePoint] = Field(default_factory=list)
+    deviation_zscore: list[TimePoint] = Field(default_factory=list)
+    signal_strength: float
+    is_overvalued: bool
+    is_undervalued: bool
+    # Bayesian-specific fields
+    signal_lower: list[TimePoint] = Field(default_factory=list, description="2.5th percentile (lower CI bound)")
+    signal_upper: list[TimePoint] = Field(default_factory=list, description="97.5th percentile (upper CI bound)")
+    ci_width_mean: float = Field(description="Mean 95% credible interval width")
+    sigma_level_mean: float = Field(description="Posterior mean of σ_level")
+    sigma_obs_mean: float = Field(description="Posterior mean of σ_obs")
+    n_samples: int = Field(description="Number of posterior samples")
+    fitting_time_sec: float = Field(description="ADVI fitting time in seconds")

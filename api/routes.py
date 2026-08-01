@@ -15,6 +15,8 @@ from fastapi import APIRouter, HTTPException, Path, Query
 from pydantic import BaseModel
 
 from api.schemas import (
+    BayesianSTSResponse,
+    STSSignalResponse,
     BacktestResponse,
     ChangepointResponse,
     ChangepointSegment,
@@ -717,11 +719,20 @@ async def hmm_regimes(
         regime_result = detector.fit(cond_vol)
 
         # Build labels (date, regime) pairs
+        # cond_vol.index is integer-based; use original df dates for proper date strings
         labels: list[RegimeLabel] = []
-        dates = cond_vol.index
-        for i, label_val in enumerate(regime_result.labels):
-            if i < len(dates):
-                date_str = str(dates[i].date()) if hasattr(dates[i], "date") else str(dates[i])
+        df = _get_data()
+        date_values = df["date"].values if "date" in df.columns else None
+        cv_indices = cond_vol.index  # integer positions (1-based from returns)
+        for j, label_val in enumerate(regime_result.labels):
+            if j < len(cv_indices):
+                idx = int(cv_indices[j])  # integer position in original df
+                if date_values is not None and 0 <= idx < len(date_values):
+                    date_str = str(date_values[idx])[:10]  # "YYYY-MM-DD"
+                elif hasattr(cv_indices[j], "date"):
+                    date_str = str(cv_indices[j].date())
+                else:
+                    date_str = str(idx)
                 labels.append(RegimeLabel(date=date_str, regime=int(label_val)))
 
         # Transition matrix as list of lists
@@ -954,6 +965,103 @@ async def changepoints(
             breakpoint_dates=breakpoint_dates,
             segments=segments,
             n_segments=len(segments),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---- 13. STS Signal Extraction ----
+
+
+@router.get("/regimes/sts-signal", response_model=STSSignalResponse)
+async def sts_signal(
+    column: str = Query(default="spread_all", description="Spread column to analyse"),
+) -> STSSignalResponse:
+    """Structural Time Series signal extraction (Local Linear Trend)."""
+    try:
+        df = _get_data()
+        df = df.set_index("date")
+        df.index = pd.to_datetime(df.index)
+
+        if column not in df.columns:
+            raise HTTPException(status_code=400, detail=f"Column '{column}' not found")
+
+        spread = df[column].dropna()
+
+        from src.models.sts import STSSignalExtractor
+
+        extractor = STSSignalExtractor()
+        extractor.fit(spread)
+        result = extractor.result
+
+        return STSSignalResponse(
+            signal=_series_to_timepoints(result.signal),
+            deviation=_series_to_timepoints(result.deviation),
+            deviation_zscore=_series_to_timepoints(result.deviation_zscore),
+            signal_strength=_safe_float(result.signal_strength),
+            is_overvalued=bool(result.is_overvalued),
+            is_undervalued=bool(result.is_undervalued),
+            level=_series_to_timepoints(result.level),
+            slope=_series_to_timepoints(result.slope),
+            irregular=_series_to_timepoints(result.irregular),
+            aic=_safe_float(result.aic),
+            bic=_safe_float(result.bic),
+            n_params=int(result.n_params),
+            sigma2_level=_safe_float(result.sigma2_level),
+            sigma2_trend=_safe_float(result.sigma2_trend),
+            sigma2_irregular=_safe_float(result.sigma2_irregular),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---- 14. Bayesian STS ----
+
+
+@router.get("/regimes/bayesian-sts", response_model=BayesianSTSResponse)
+async def bayesian_sts(
+    column: str = Query(default="spread_all", description="Spread column to analyse"),
+    n_advi_iter: int = Query(default=15000, ge=1000, le=50000, description="ADVI iterations"),
+    n_samples: int = Query(default=300, ge=50, le=1000, description="Posterior samples"),
+) -> BayesianSTSResponse:
+    """Bayesian Structural Time Series via PyMC ADVI."""
+    try:
+        df = _get_data()
+        df = df.set_index("date")
+        df.index = pd.to_datetime(df.index)
+
+        if column not in df.columns:
+            raise HTTPException(status_code=400, detail=f"Column '{column}' not found")
+
+        spread = df[column].dropna()
+
+        from src.models.bayesian_sts import BayesianSTSSignalExtractor
+
+        extractor = BayesianSTSSignalExtractor(
+            n_advi_steps=n_advi_iter,
+            n_samples=n_samples,
+        )
+        extractor.fit(spread)
+        result = extractor.result
+
+        return BayesianSTSResponse(
+            signal=_series_to_timepoints(result.signal),
+            deviation=_series_to_timepoints(result.deviation),
+            deviation_zscore=_series_to_timepoints(result.deviation_zscore),
+            signal_strength=_safe_float(result.signal_strength),
+            is_overvalued=bool(result.is_overvalued),
+            is_undervalued=bool(result.is_undervalued),
+            signal_lower=_series_to_timepoints(result.signal_lower),
+            signal_upper=_series_to_timepoints(result.signal_upper),
+            ci_width_mean=_safe_float(result.ci_width_mean),
+            sigma_level_mean=_safe_float(result.sigma_level_mean),
+            sigma_obs_mean=_safe_float(result.sigma_obs_mean),
+            n_samples=int(result.n_samples),
+            fitting_time_sec=_safe_float(result.fitting_time_sec),
         )
     except HTTPException:
         raise
