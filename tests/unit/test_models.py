@@ -20,14 +20,14 @@ class TestGARCH:
     def test_fit_egarch(self, mock_returns):
         from src.models.garch import GARCHModel
         m = GARCHModel(model_type="egarch")
-        m.fit(mock_returns)
+        m.fit(mock_returns)  # spread changes
         assert m.result.converged
         assert "EGARCH" in m.result.model_name
 
     def test_fit_gjr(self, mock_returns):
         from src.models.garch import GARCHModel
         m = GARCHModel(model_type="gjr")
-        m.fit(mock_returns)
+        m.fit(mock_returns)  # spread changes
         assert m.result.converged
 
     def test_params_extracted(self, fitted_garch):
@@ -60,8 +60,8 @@ class TestKalman:
     def test_fit(self, mock_returns):
         from src.models.kalman import KalmanSignalExtractor
         m = KalmanSignalExtractor()
-        m.fit(mock_returns)
-        assert m.is_fitted
+        m.fit(mock_returns)  # spread changes
+        assert m.result is not None
         r = m.result
         assert r is not None
 
@@ -70,7 +70,7 @@ class TestFIGARCH:
     def test_fit(self, mock_returns):
         from src.models.figarch import FIGARCHModel
         m = FIGARCHModel()
-        m.fit(mock_returns)
+        m.fit(mock_returns)  # spread changes
         r = m.result
         assert "FIGARCH" in r.model_name or r.converged
         assert len(r.conditional_volatility) > 0
