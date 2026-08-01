@@ -148,3 +148,449 @@
 .chart-container {
   @apply rounded-lg border border-border bg-card p-4;
 }
+/* Smooth scroll for anchor links */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+/* Selection color */
+::selection {
+  background: oklch(0.7 0.15 250 / 0.25);
+  color: oklch(0.95 0.005 260);
+}
+
+/* ─── Institution Finance UI Utilities ─────────────────────────────── */
+
+/* Glass card effect */
+.glass-card {
+  @apply bg-card/60 backdrop-blur-md border border-border/50;
+}
+
+/* Gradient top accent border */
+.accent-border-blue { border-top: 2px solid oklch(0.7 0.15 250); }
+.accent-border-green { border-top: 2px solid oklch(0.7 0.15 170); }
+.accent-border-orange { border-top: 2px solid oklch(0.75 0.15 50); }
+.accent-border-pink { border-top: 2px solid oklch(0.7 0.15 330); }
+.accent-border-cyan { border-top: 2px solid oklch(0.75 0.15 90); }
+
+/* Subtle glow on hover */
+.glow-hover {
+  @apply transition-shadow duration-300;
+}
+.glow-hover:hover {
+  box-shadow: 0 0 20px oklch(0.7 0.15 250 / 0.12), 0 8px 24px oklch(0 0 0 / 0.25);
+}
+
+/* Chart wrapper header bar */
+.chart-header {
+  @apply flex items-center justify-between px-4 py-3 border-b border-border/50 bg-card/80 rounded-t-xl;
+}
+.chart-header h3 {
+  @apply text-sm font-semibold text-foreground tracking-tight;
+}
+.chart-header .chart-meta {
+  @apply flex items-center gap-3 text-xs text-muted-foreground font-mono;
+}
+
+/* Metric strip below chart header */
+.metric-strip {
+  @apply flex items-center gap-4 px-4 py-2 border-b border-border/30 bg-muted/30;
+}
+.metric-strip .metric-item {
+  @apply flex items-center gap-1.5 text-xs;
+}
+.metric-strip .metric-label {
+  @apply text-muted-foreground;
+}
+.metric-strip .metric-value {
+  @apply font-mono font-medium text-foreground;
+}
+
+/* TOC nav */
+.toc-nav {
+  @apply hidden xl:block fixed top-24 right-8 w-48 space-y-1 text-sm z-40;
+}
+.toc-nav a {
+  @apply block px-3 py-1.5 text-muted-foreground hover:text-foreground transition-colors rounded-md border-l-2 border-transparent hover:border-primary/50;
+}
+.toc-nav a.active {
+  @apply text-primary border-primary;
+}
+
+/* Signal verdict badge */
+.verdict-badge {
+  @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium;
+}
+.verdict-badge.verdict-overvalued {
+  @apply bg-chart-3/15 text-chart-3 border border-chart-3/30;
+}
+.verdict-badge.verdict-undervalued {
+  @apply bg-chart-2/15 text-chart-2 border border-chart-2/30;
+}
+.verdict-badge.verdict-neutral {
+  @apply bg-muted text-muted-foreground border border-border;
+}
+
+/* Smooth section separator */
+.section-divider {
+  @apply w-full h-px bg-gradient-to-r from-transparent via-border to-transparent my-8;
+}
+
+/* Pill label */
+.pill-label {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted/60 text-muted-foreground;
+}
+
+/* Animated gradient shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer-bg {
+  background: linear-gradient(
+    90deg,
+    oklch(0.7 0.15 250 / 0.05) 0%,
+    oklch(0.7 0.15 250 / 0.12) 50%,
+    oklch(0.7 0.15 250 / 0.05) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 8s ease-in-out infinite;
+}
+
+/* Hero gradient text */
+.hero-gradient {
+  background: linear-gradient(135deg, oklch(0.75 0.15 250), oklch(0.7 0.15 170));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Insight card glow variants */
+.insight-glow-info {
+  box-shadow: inset 0 0 0 1px oklch(0.7 0.15 250 / 0.15), 0 0 16px oklch(0.7 0.15 250 / 0.06);
+}
+.insight-glow-warning {
+  box-shadow: inset 0 0 0 1px oklch(0.75 0.15 50 / 0.15), 0 0 16px oklch(0.75 0.15 50 / 0.06);
+}
+.insight-glow-success {
+  box-shadow: inset 0 0 0 1px oklch(0.7 0.15 170 / 0.15), 0 0 16px oklch(0.7 0.15 170 / 0.06);
+}
+
+/* Comparison table */
+.comparison-table {
+  @apply w-full text-sm border-collapse;
+}
+.comparison-table th {
+  @apply text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-2 border-b border-border;
+}
+.comparison-table td {
+  @apply px-3 py-2.5 border-b border-border/50 text-foreground;
+}
+.comparison-table tr:hover td {
+  @apply bg-muted/30;
+}
+
+/* Animated comparison table rows */
+.comparison-table tbody tr {
+  @apply transition-all duration-200;
+}
+.comparison-table tbody tr:hover td {
+  @apply bg-muted/40;
+}
+.comparison-table td:first-child {
+  @apply font-semibold;
+}
+
+/* Back to top button */
+.back-to-top {
+  @apply fixed bottom-6 right-6 z-50 flex items-center justify-center;
+  @apply h-10 w-10 rounded-full border border-border/60 bg-card/80 backdrop-blur-md;
+  @apply text-muted-foreground hover:text-foreground hover:border-primary/50;
+  @apply shadow-lg shadow-black/20 transition-all duration-300;
+}
+.back-to-top:hover {
+  @apply -translate-y-0.5;
+}
+
+/* ─── Signal Dashboard ─────────────────────────────────────────────── */
+.signal-dashboard {
+  @apply rounded-xl border border-border/50 bg-card/40 backdrop-blur-sm overflow-hidden;
+}
+.signal-dashboard-header {
+  @apply flex items-center justify-between px-5 py-3 border-b border-border/40 bg-muted/20;
+}
+.signal-dashboard-grid {
+  @apply grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-border/30;
+}
+.signal-card {
+  @apply px-4 py-4 transition-all duration-200;
+}
+.signal-card:hover {
+  @apply bg-muted/20;
+}
+.signal-card-label {
+  @apply text-[11px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5;
+}
+.signal-card-value {
+  @apply text-lg font-bold font-mono tracking-tight;
+}
+.signal-card-detail {
+  @apply text-xs text-muted-foreground font-mono mt-1;
+}
+
+/* Signal verdict card highlight */
+.signal-card-verdict {
+  @apply relative;
+}
+.signal-card-verdict::before {
+  content: '';
+  @apply absolute inset-0 pointer-events-none rounded-none;
+}
+.signal-card-overvalued::before {
+  box-shadow: inset 0 0 0 1px oklch(0.75 0.15 50 / 0.2), 0 0 20px oklch(0.75 0.15 50 / 0.08);
+}
+.signal-card-undervalued::before {
+  box-shadow: inset 0 0 0 1px oklch(0.7 0.15 170 / 0.2), 0 0 20px oklch(0.7 0.15 170 / 0.08);
+}
+.signal-card-neutral::before {
+  box-shadow: inset 0 0 0 1px oklch(0.5 0.02 260 / 0.15);
+}
+
+/* ─── Hero Gradient Background ────────────────────────────────────── */
+.hero-gradient-bg {
+  background: 
+    radial-gradient(ellipse at 20% 50%, oklch(0.7 0.15 250 / 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, oklch(0.7 0.15 170 / 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, oklch(0.7 0.15 330 / 0.03) 0%, transparent 50%),
+    linear-gradient(180deg, oklch(0.14 0.015 260) 0%, oklch(0.12 0.01 260) 100%);
+  border-bottom: 1px solid oklch(0.28 0.02 260 / 0.5);
+  border-radius: 1rem;
+}
+
+/* ─── Method Comparison Table Enhancement ─────────────────────────── */
+.method-comparison-table {
+  @apply rounded-xl border border-border/50 bg-card/40 backdrop-blur-sm overflow-hidden p-1;
+}
+.method-comparison-table .comparison-table {
+  @apply rounded-lg;
+}
+.method-comparison-table .comparison-table th {
+  @apply bg-muted/30;
+}
+
+/* ─── TOC Enhanced ────────────────────────────────────────────────── */
+.toc-nav a {
+  @apply flex items-baseline gap-1.5;
+}
+.toc-label {
+  @apply font-medium text-xs;
+}
+.toc-sublabel {
+  @apply text-[10px] text-muted-foreground/60;
+}
+.toc-nav a.active .toc-sublabel {
+  @apply text-primary/60;
+}
+
+/* ─── Skeleton Shimmer ────────────────────────────────────────────── */
+@keyframes skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+[data-slot="skeleton"] {
+  background: linear-gradient(
+    90deg,
+    oklch(0.22 0.015 260) 0%,
+    oklch(0.28 0.02 260) 50%,
+    oklch(0.22 0.015 260) 100%
+  ) !important;
+  background-size: 200% 100% !important;
+  animation: skeleton-shimmer 2s ease-in-out infinite !important;
+}
+
+/* ─── Focus Ring Enhancement ──────────────────────────────────────── */
+a:focus-visible,
+button:focus-visible {
+  @apply outline-none ring-2 ring-primary/50 ring-offset-2 ring-offset-background rounded-sm;
+}
+
+/* ─── Scrollbar Track Subtle Gradient ─────────────────────────────── */
+::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, oklch(0.15 0.012 260), oklch(0.12 0.01 260));
+}
+
+/* ─── Link Underline Animation ────────────────────────────────────── */
+.prose-narrative a {
+  @apply text-primary underline decoration-primary/30 underline-offset-2;
+  @apply transition-all duration-200 hover:decoration-primary/80;
+}
+
+/* ─── Section Entry Animation ─────────────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  section[id] {
+    scroll-margin-top: 5rem;
+  }
+}
+
+/* ─── Executive Summary ──────────────────────────────────────────── */
+.exec-summary {
+  @apply relative rounded-2xl overflow-hidden;
+  background:
+    radial-gradient(ellipse at 10% 30%, oklch(0.7 0.15 250 / 0.08) 0%, transparent 55%),
+    radial-gradient(ellipse at 90% 70%, oklch(0.7 0.15 170 / 0.05) 0%, transparent 50%),
+    linear-gradient(135deg, oklch(0.16 0.015 260), oklch(0.14 0.012 260));
+  border: 1px solid oklch(0.28 0.02 260 / 0.6);
+}
+.exec-summary-inner {
+  @apply px-6 py-6 md:px-8 md:py-8;
+}
+.exec-verdict {
+  @apply inline-flex items-center gap-2.5 px-4 py-2 rounded-full font-semibold text-sm;
+  @apply border transition-all duration-300;
+}
+.exec-verdict-overvalued {
+  @apply bg-chart-3/15 text-chart-3 border-chart-3/30;
+  box-shadow: 0 0 12px oklch(0.75 0.15 50 / 0.1);
+}
+.exec-verdict-undervalued {
+  @apply bg-chart-2/15 text-chart-2 border-chart-2/30;
+  box-shadow: 0 0 12px oklch(0.7 0.15 170 / 0.1);
+}
+.exec-verdict-neutral {
+  @apply bg-muted/30 text-muted-foreground border-border/40;
+}
+
+.exec-mini-card {
+  @apply rounded-lg px-3.5 py-3 border border-border/30 bg-card/30;
+  @apply transition-all duration-200 hover:bg-card/50 hover:border-border/50;
+}
+.exec-mini-label {
+  @apply text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-1;
+}
+.exec-mini-value {
+  @apply text-base font-bold font-mono tracking-tight;
+}
+.exec-mini-detail {
+  @apply text-[10px] text-muted-foreground font-mono mt-0.5;
+}
+
+.exec-agreement-bar {
+  @apply h-1.5 rounded-full overflow-hidden bg-muted/30;
+}
+.exec-agreement-fill {
+  @apply h-full rounded-full transition-all duration-700 ease-out;
+}
+
+/* ─── Method Card (replaces table row) ──────────────────────────── */
+.method-card-grid {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3;
+}
+.method-card {
+  @apply rounded-xl border border-border/40 bg-card/30 p-4 transition-all duration-200;
+  @apply hover:border-primary/30 hover:bg-card/50 hover:shadow-lg hover:shadow-primary/5;
+}
+.method-card-icon {
+  @apply flex items-center justify-center w-9 h-9 rounded-lg mb-3;
+  @apply bg-primary/10 text-primary;
+}
+.method-card-title {
+  @apply text-sm font-bold text-foreground mb-1;
+}
+.method-card-en {
+  @apply text-[10px] font-mono text-primary/60 mb-2;
+}
+.method-card-desc {
+  @apply text-xs text-muted-foreground leading-relaxed;
+}
+
+/* ─── Section Connector ──────────────────────────────────────────── */
+.section-connector {
+  @apply relative h-16 flex items-center justify-center;
+}
+.section-connector::before {
+  content: '';
+  @apply absolute left-1/2 -translate-x-1/2;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    oklch(0.28 0.02 260 / 0.6) 30%,
+    oklch(0.28 0.02 260 / 0.6) 70%,
+    transparent 100%
+  );
+}
+.section-connector-dot {
+  @apply relative z-10 w-2 h-2 rounded-full bg-primary/40;
+  box-shadow: 0 0 8px oklch(0.7 0.15 250 / 0.3);
+}
+
+/* ─── Conclusion Footer ──────────────────────────────────────────── */
+.conclusion-footer {
+  @apply rounded-xl border border-border/40 bg-card/20 p-6 mt-8;
+  background:
+    radial-gradient(ellipse at 50% 0%, oklch(0.7 0.15 250 / 0.05) 0%, transparent 60%);
+}
+.conclusion-footer h3 {
+  @apply text-lg font-bold text-foreground mb-4;
+}
+.conclusion-steps {
+  @apply grid grid-cols-1 md:grid-cols-3 gap-4;
+}
+.conclusion-step {
+  @apply rounded-lg border border-border/30 bg-card/30 p-4;
+  @apply transition-all duration-200 hover:bg-card/50 hover:border-border/50;
+}
+.conclusion-step-number {
+  @apply text-xs font-mono text-primary/70 font-semibold mb-1;
+}
+.conclusion-step-title {
+  @apply text-sm font-bold text-foreground mb-1;
+}
+.conclusion-step-desc {
+  @apply text-xs text-muted-foreground leading-relaxed;
+}
+
+/* ─── Print Styles ───────────────────────────────────────────────── */
+@media print {
+  .dark {
+    --background: #fff;
+    --foreground: #1a1a2e;
+    --card: #f8f8fa;
+    --muted: #e8e8f0;
+    --muted-foreground: #555;
+    --border: #ddd;
+    --primary: #2563eb;
+  }
+  .back-to-top,
+  .sticky { display: none !important; }
+  .chart-container { break-inside: avoid; }
+  section { break-inside: avoid; }
+  body { font-size: 11pt; }
+}
+
+/* ─── Chart Container Hover Enhancement ──────────────────────────── */
+.chart-container {
+  @apply transition-shadow duration-300;
+}
+.chart-container:hover {
+  box-shadow: 0 4px 20px oklch(0 0 0 / 0.15), 0 0 0 1px oklch(0.28 0.02 260 / 0.3);
+}
+
+/* ─── Table Row Hover ────────────────────────────────────────────── */
+.comparison-table tbody tr {
+  @apply transition-colors duration-150;
+}
+.comparison-table tbody tr:hover {
+  @apply bg-muted/30;
+}
+
+/* ─── Badge Pulse Animation ─────────────────────────────────────── */
+@keyframes badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.7 0.15 250 / 0.3); }
+  50% { box-shadow: 0 0 0 4px oklch(0.7 0.15 250 / 0); }
+}
+.badge-pulse {
+  animation: badge-pulse 2s ease-in-out infinite;
+}
