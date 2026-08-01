@@ -11,9 +11,36 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Path, Query
 from pydantic import BaseModel
 
+from api.schemas import (
+    BacktestResponse,
+    ChristoffersenTest,
+    ColumnStatistics,
+    CustomFitRequest,
+    DataStatisticsResponse,
+    DiagnosticsInfo,
+    EvtResponse,
+    FigarchResponse,
+    GpdParams,
+    HillEstimate,
+    HillInfo,
+    HmmResponse,
+    KupiecTest,
+    MeanExcessPoint,
+    ModelDetailResponse,
+    RegimeLabel,
+    RegimeStats,
+    SensitivityResponse,
+    SensitivityVariable,
+    StressRequest,
+    StressResponse,
+    StressScenario,
+    TimePoint,
+    TournamentResponse,
+    TournamentRow,
+)
 from src.core.config import DataSource, get_settings
 from src.core.logging_config import get_logger
 
@@ -21,7 +48,7 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api/v1")
 
 
-# --- Response Models ---
+# --- Legacy Response Models (kept for existing endpoints) ---
 
 
 class HealthResponse(BaseModel):
@@ -95,7 +122,84 @@ def _get_returns() -> pd.Series:
     return _data_cache["returns"]
 
 
-# --- Endpoints ---
+# --- Helper functions ---
+
+
+def _safe_float(v: Any) -> float:
+    """Convert any numeric type to a JSON-safe Python float."""
+    if v is None:
+        return 0.0
+    if isinstance(v, (np.floating, np.integer)):
+        return float(v)
+    if isinstance(v, float) and (np.isnan(v) or np.isinf(v)):
+        return 0.0
+    return float(v)
+
+
+def _series_to_timepoints(series: pd.Series) -> list[TimePoint]:
+    """Convert a pandas Series with DatetimeIndex to list of TimePoint."""
+    points = []
+    for idx, val in series.items():
+        date_str = str(idx.date()) if hasattr(idx, "date") else str(idx)
+        points.append(TimePoint(date=date_str, value=_safe_float(val)))
+    return points
+
+
+def _build_diagnostics_info(model: Any) -> DiagnosticsInfo | None:
+    """Run diagnostics on a fitted model and return DiagnosticsInfo."""
+    try:
+        diag = model.diagnose()
+        return DiagnosticsInfo(
+            ljung_box_stat=_safe_float(diag.ljung_box_stat),
+            ljung_box_pvalue=_safe_float(diag.ljung_box_pvalue),
+            arch_lm_stat=_safe_float(diag.arch_lm_stat),
+            arch_lm_pvalue=_safe_float(diag.arch_lm_pvalue),
+            jarque_bera_stat=_safe_float(diag.jarque_bera_stat),
+            jarque_bera_pvalue=_safe_float(diag.jarque_bera_pvalue),
+            has_arch_effects=bool(diag.has_arch_effects),
+            is_normal=bool(diag.is_normal),
+            n_obs=int(diag.n_obs),
+        )
+    except Exception:
+        return None
+
+
+def _build_model_detail(model: Any) -> ModelDetailResponse:
+    """Build a ModelDetailResponse from a fitted VolatilityModel."""
+    r = model.result
+    diag_info = _build_diagnostics_info(model)
+
+    return ModelDetailResponse(
+        model_name=r.model_name,
+        params={k: _safe_float(v) for k, v in r.params.items()},
+        aic=_safe_float(r.aic) if r.aic is not None else None,
+        bic=_safe_float(r.bic) if r.bic is not None else None,
+        loglikelihood=_safe_float(r.loglikelihood) if r.loglikelihood is not None else None,
+        converged=bool(r.converged),
+        persistence=_safe_float(r.persistence) if r.persistence is not None else None,
+        conditional_volatility=_series_to_timepoints(r.conditional_volatility),
+        standardized_residuals=_series_to_timepoints(r.standardized_residuals),
+        diagnostics=diag_info,
+    )
+
+
+def json_safe_df(df: pd.DataFrame) -> list[dict]:
+    """Convert DataFrame to JSON-safe list of dicts."""
+    records = df.to_dict(orient="records")
+    for rec in records:
+        for k, v in rec.items():
+            if isinstance(v, (pd.Timestamp, np.datetime64)):
+                rec[k] = str(v)
+            elif isinstance(v, (np.integer,)):
+                rec[k] = int(v)
+            elif isinstance(v, (np.floating,)):
+                rec[k] = float(v)
+    return records
+
+
+# =====================================================================
+# Existing endpoints (unchanged)
+# =====================================================================
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -237,15 +341,505 @@ async def market_gauge() -> dict:
     }
 
 
-def json_safe_df(df: pd.DataFrame) -> list[dict]:
-    """Convert DataFrame to JSON-safe list of dicts."""
-    records = df.to_dict(orient="records")
-    for rec in records:
-        for k, v in rec.items():
-            if isinstance(v, (pd.Timestamp, np.datetime64)):
-                rec[k] = str(v)
-            elif isinstance(v, (np.integer,)):
-                rec[k] = int(v)
-            elif isinstance(v, (np.floating,)):
-                rec[k] = float(v)
-    return records
+# =====================================================================
+# New endpoints
+# =====================================================================
+
+
+# ---- 1. Data statistics with ADF test ----
+
+
+@router.get("/data/statistics", response_model=DataStatisticsResponse)
+async def data_statistics() -> DataStatisticsResponse:
+    """Column statistics with Augmented Dickey-Fuller unit root test."""
+    try:
+        from statsmodels.tsa.stattools import adfuller
+
+        df = _get_data()
+        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+
+        columns_stats: list[ColumnStatistics] = []
+
+        for col in numeric_cols:
+            s = df[col].dropna()
+            if len(s) < 10:
+                continue
+
+            n = len(s)
+            mean_val = _safe_float(s.mean())
+            std_val = _safe_float(s.std())
+            skew_val = _safe_float(s.skew())
+            kurt_val = _safe_float(s.kurtosis())
+            min_val = _safe_float(s.min())
+            max_val = _safe_float(s.max())
+            median_val = _safe_float(s.median())
+            q25_val = _safe_float(s.quantile(0.25))
+            q75_val = _safe_float(s.quantile(0.75))
+
+            # ADF test
+            adf_stat: float | None = None
+            adf_pval: float | None = None
+            is_stat: bool | None = None
+            try:
+                adf_result = adfuller(s.values, autolag="AIC")
+                adf_stat = _safe_float(adf_result[0])
+                adf_pval = _safe_float(adf_result[1])
+                is_stat = bool(adf_pval < 0.05)
+            except Exception:
+                pass
+
+            columns_stats.append(ColumnStatistics(
+                column=col,
+                n=n,
+                mean=mean_val,
+                std=std_val,
+                skew=skew_val,
+                kurtosis=kurt_val,
+                min=min_val,
+                max=max_val,
+                median=median_val,
+                q25=q25_val,
+                q75=q75_val,
+                adf_stat=adf_stat,
+                adf_pvalue=adf_pval,
+                is_stationary=is_stat,
+            ))
+
+        return DataStatisticsResponse(columns=columns_stats)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---- 2. Model tournament ----
+
+
+@router.get("/models/tournament", response_model=TournamentResponse)
+async def model_tournament() -> TournamentResponse:
+    """Full model comparison: GARCH, EGARCH, GJR, EWMA, FIGARCH."""
+    try:
+        returns = _get_returns()
+
+        from src.models.ewma import EWMAModel
+        from src.models.figarch import FIGARCHModel
+        from src.models.garch import GARCHModel
+        from src.selection.tournament import ModelTournament
+
+        # Fit all models
+        models_to_fit: dict[str, Any] = {}
+
+        garch = GARCHModel(model_type="garch")
+        garch.fit(returns)
+        models_to_fit["GARCH"] = garch
+
+        egarch = GARCHModel(model_type="egarch")
+        egarch.fit(returns)
+        models_to_fit["EGARCH"] = egarch
+
+        gjr = GARCHModel(model_type="gjr")
+        gjr.fit(returns)
+        models_to_fit["GJR"] = gjr
+
+        ewma = EWMAModel()
+        ewma.fit(returns)
+        models_to_fit["EWMA"] = ewma
+
+        figarch = FIGARCHModel()
+        figarch.fit(returns)
+        models_to_fit["FIGARCH"] = figarch
+
+        # Run tournament
+        tournament = ModelTournament()
+        for name, m in models_to_fit.items():
+            tournament.add_model(name, m)
+        df_results = tournament.run()
+
+        # Build response rows
+        rows: list[TournamentRow] = []
+        for idx, row_data in df_results.iterrows():
+            rows.append(TournamentRow(
+                model_name=str(idx),
+                model_type=str(row_data.get("model_type", "")),
+                aic=_safe_float(row_data["aic"]) if pd.notna(row_data.get("aic")) else None,
+                bic=_safe_float(row_data["bic"]) if pd.notna(row_data.get("bic")) else None,
+                converged=bool(row_data.get("converged", True)),
+                persistence=_safe_float(row_data["persistence"]) if pd.notna(row_data.get("persistence")) else None,
+                has_arch_effects=bool(row_data["has_arch_effects"]) if row_data.get("has_arch_effects") is not None else None,
+                is_normal=bool(row_data["is_normal"]) if row_data.get("is_normal") is not None else None,
+                lb_pvalue=_safe_float(row_data["lb_pvalue"]) if pd.notna(row_data.get("lb_pvalue")) else None,
+                arch_pvalue=_safe_float(row_data["arch_pvalue"]) if pd.notna(row_data.get("arch_pvalue")) else None,
+                jb_pvalue=_safe_float(row_data["jb_pvalue"]) if pd.notna(row_data.get("jb_pvalue")) else None,
+            ))
+
+        # Determine winners
+        winner_aic: str | None = None
+        winner_bic: str | None = None
+        try:
+            winner_aic = tournament.winner("aic")
+        except (ValueError, Exception):
+            pass
+        try:
+            winner_bic = tournament.winner("bic")
+        except (ValueError, Exception):
+            pass
+
+        return TournamentResponse(
+            models=rows,
+            winner_aic=winner_aic,
+            winner_bic=winner_bic,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---- 3. FIGARCH-specific (must be before {name}/detail) ----
+
+
+@router.get("/models/figarch", response_model=FigarchResponse)
+async def figarch_detail() -> FigarchResponse:
+    """FIGARCH model with fractional differencing parameter d."""
+    try:
+        returns = _get_returns()
+        from src.models.figarch import FIGARCHModel
+
+        model = FIGARCHModel()
+        model.fit(returns)
+        r = model.result
+
+        diag_info = _build_diagnostics_info(model)
+
+        return FigarchResponse(
+            model_name=r.model_name,
+            d=_safe_float(r.params.get("d", 0.0)),
+            params={k: _safe_float(v) for k, v in r.params.items()},
+            aic=_safe_float(r.aic) if r.aic is not None else None,
+            bic=_safe_float(r.bic) if r.bic is not None else None,
+            converged=bool(r.converged),
+            persistence=_safe_float(r.persistence) if r.persistence is not None else None,
+            conditional_volatility=_series_to_timepoints(r.conditional_volatility),
+            diagnostics=diag_info,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---- 4. Custom model fit (must be before {name}/detail) ----
+
+
+@router.post("/models/fit-custom", response_model=ModelDetailResponse)
+async def fit_custom_model(req: CustomFitRequest) -> ModelDetailResponse:
+    """Fit a custom GARCH-family model with user-specified parameters."""
+    try:
+        returns = _get_returns()
+        from src.models.garch import GARCHModel
+
+        model = GARCHModel(
+            model_type=req.model_type,  # type: ignore[arg-type]
+            p=req.p,
+            q=req.q,
+            dist=req.dist,
+        )
+        model.fit(returns)
+        return _build_model_detail(model)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---- 5. Model detail by name ----
+
+
+@router.get("/models/{name}/detail", response_model=ModelDetailResponse)
+async def model_detail(
+    name: str = Path(..., pattern="^(garch|egarch|gjr|ewma|figarch)$"),
+) -> ModelDetailResponse:
+    """Model detail with conditional volatility and standardized residuals."""
+    try:
+        returns = _get_returns()
+
+        if name == "ewma":
+            from src.models.ewma import EWMAModel
+            model: Any = EWMAModel()
+        elif name == "figarch":
+            from src.models.figarch import FIGARCHModel
+            model = FIGARCHModel()
+        else:
+            from src.models.garch import GARCHModel
+            model = GARCHModel(model_type=name)  # type: ignore[arg-type]
+
+        model.fit(returns)
+        return _build_model_detail(model)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---- 6. EVT detailed analysis ----
+
+
+@router.get("/risk/evt", response_model=EvtResponse)
+async def risk_evt(
+    confidence: float = Query(default=0.99, ge=0.9, le=0.999),
+    percentile: float = Query(default=0.10, ge=0.01, le=0.50),
+) -> EvtResponse:
+    """Extreme Value Theory analysis with Hill estimator and mean excess plot."""
+    try:
+        returns = _get_returns()
+        from src.risk.evt import EVTAnalyzer
+
+        evt = EVTAnalyzer()
+        evt.fit(returns, confidence)
+
+        # Hill estimator at requested percentile
+        hill_result = evt.hill_estimator(k_percentile=percentile)
+
+        # Hill estimates at multiple k percentiles for Hill plot
+        estimates: list[HillEstimate] = []
+        for kp in [0.05, 0.10, 0.15, 0.20, 0.25]:
+            try:
+                h = evt.hill_estimator(k_percentile=kp)
+                estimates.append(HillEstimate(
+                    k_percentile=kp,
+                    tail_index=_safe_float(h["tail_index"]),
+                    shape=_safe_float(h["shape"]),
+                ))
+            except Exception:
+                pass
+
+        hill_info = HillInfo(
+            tail_index=_safe_float(hill_result["tail_index"]),
+            shape=_safe_float(hill_result["shape"]),
+            threshold=_safe_float(hill_result["threshold"]),
+            k=int(hill_result["k"]),
+            estimates=estimates,
+        )
+
+        # Mean excess data
+        me_df = evt.mean_excess_data()
+        mean_excess: list[MeanExcessPoint] = [
+            MeanExcessPoint(
+                threshold=_safe_float(row["threshold"]),
+                mean_excess=_safe_float(row["mean_excess"]),
+            )
+            for _, row in me_df.iterrows()
+        ]
+
+        # GPD parameters from the fitted result
+        r = evt.result
+        gpd_params = GpdParams(
+            xi=_safe_float(r.gpd_shape) if r.gpd_shape is not None else 0.0,
+            sigma=_safe_float(r.gpd_scale) if r.gpd_scale is not None else 0.0,
+        )
+
+        return EvtResponse(
+            hill=hill_info,
+            mean_excess=mean_excess,
+            gpd_params=gpd_params,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---- 7. VaR backtest ----
+
+
+@router.get("/risk/backtest", response_model=BacktestResponse)
+async def risk_backtest(
+    confidence: float = Query(default=0.99, ge=0.9, le=0.999),
+    window: int = Query(default=252, ge=50, le=1000),
+) -> BacktestResponse:
+    """VaR backtest with Kupiec and Christoffersen coverage tests."""
+    try:
+        returns = _get_returns()
+        from src.risk.backtest import VaRBacktest
+        from src.risk.var_engine import VaREngine
+
+        # Compute rolling VaR
+        var_df = VaREngine.rolling_var(returns, window=window, confidence=confidence)
+        var_series = var_df["var"]
+
+        # Align returns to var_series index
+        aligned_returns = returns.loc[var_series.index]
+
+        # Run backtest
+        bt = VaRBacktest()
+        result = bt.full_backtest(aligned_returns, var_series, confidence)
+
+        # Build var_series time points
+        var_points = _series_to_timepoints(var_series)
+
+        expected_rate = 1.0 - confidence
+        actual_rate = result.n_violations / result.n_observations if result.n_observations > 0 else 0.0
+
+        return BacktestResponse(
+            violations=result.n_violations,
+            n_observations=result.n_observations,
+            expected_violations=_safe_float(result.expected_violations),
+            actual_coverage=_safe_float(result.actual_coverage),
+            passes=bool(result.passes),
+            kupiec=KupiecTest(
+                statistic=_safe_float(result.kupiec_stat),
+                pvalue=_safe_float(result.kupiec_pvalue),
+                expected_rate=_safe_float(expected_rate),
+                actual_rate=_safe_float(actual_rate),
+            ),
+            christoffersen=ChristoffersenTest(
+                statistic=_safe_float(result.christoffersen_stat),
+                pvalue=_safe_float(result.christoffersen_pvalue),
+            ),
+            var_series=var_points,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---- 8. HMM regime detection ----
+
+
+@router.get("/regimes/hmm", response_model=HmmResponse)
+async def hmm_regimes(
+    n_regimes: int = Query(default=3, ge=2, le=6),
+) -> HmmResponse:
+    """Hidden Markov Model regime detection on conditional volatility."""
+    try:
+        returns = _get_returns()
+
+        # Fit GARCH to get conditional volatility
+        from src.models.garch import GARCHModel
+        from src.regime.hmm_regime import HMMRegimeDetector
+
+        garch = GARCHModel(model_type="garch")
+        garch.fit(returns)
+        cond_vol = garch.result.conditional_volatility
+
+        # Detect regimes
+        detector = HMMRegimeDetector(n_regimes=n_regimes)
+        regime_result = detector.fit(cond_vol)
+
+        # Build labels (date, regime) pairs
+        labels: list[RegimeLabel] = []
+        dates = cond_vol.index
+        for i, label_val in enumerate(regime_result.labels):
+            if i < len(dates):
+                date_str = str(dates[i].date()) if hasattr(dates[i], "date") else str(dates[i])
+                labels.append(RegimeLabel(date=date_str, regime=int(label_val)))
+
+        # Transition matrix as list of lists
+        trans_matrix: list[list[float]] = []
+        for row in regime_result.transition_matrix:
+            trans_matrix.append([_safe_float(v) for v in row])
+
+        # Per-regime statistics
+        regime_stats: list[RegimeStats] = []
+        for i in range(regime_result.n_regimes):
+            regime_stats.append(RegimeStats(
+                regime=i,
+                mean=_safe_float(regime_result.regime_means.get(i, 0.0)),
+                std=_safe_float(regime_result.regime_stds.get(i, 0.0)),
+            ))
+
+        return HmmResponse(
+            n_regimes=regime_result.n_regimes,
+            labels=labels,
+            transition_matrix=trans_matrix,
+            regime_stats=regime_stats,
+            current_regime=int(regime_result.current_regime),
+            current_regime_name=str(regime_result.current_regime_name),
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---- 9. Stress test ----
+
+
+@router.post("/scenarios/stress", response_model=StressResponse)
+async def stress_test(req: StressRequest) -> StressResponse:
+    """Stress test with elevated volatility scenarios."""
+    try:
+        returns = _get_returns()
+        from src.analysis.scenarios import ScenarioGenerator
+
+        gen = ScenarioGenerator.from_data(returns)
+        results = gen.stress_test(
+            current_spread=req.current,
+            shock_multipliers=req.shock_multipliers,
+            horizon=req.horizon,
+            n_paths=req.n_paths,
+        )
+
+        scenarios: list[StressScenario] = []
+        for name, data in results.items():
+            scenarios.append(StressScenario(
+                name=str(name),
+                vol_multiplier=_safe_float(data.get("vol_multiplier", 1.0)),
+                median_final=_safe_float(data.get("median_final", 0.0)),
+                p5=_safe_float(data.get("p5_final", 0.0)),
+                p95=_safe_float(data.get("p95_final", 0.0)),
+                prob_exceed=_safe_float(data.get("probability_exceed_threshold", 0.0)),
+            ))
+
+        return StressResponse(scenarios=scenarios)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---- 10. Sensitivity analysis ----
+
+
+@router.get("/analysis/sensitivity", response_model=SensitivityResponse)
+async def sensitivity_analysis() -> SensitivityResponse:
+    """Sensitivity analysis (tornado diagram) for GARCH parameters."""
+    try:
+        returns = _get_returns()
+
+        from src.analysis.sensitivity import SensitivityAnalyzer
+        from src.models.garch import GARCHModel
+
+        # Fit base GARCH model to get parameters
+        garch = GARCHModel(model_type="garch")
+        garch.fit(returns)
+        base_params = {k: float(v) for k, v in garch.result.params.items()}
+
+        # Define metric: unconditional variance = omega / (1 - alpha - beta)
+        def garch_unconditional_var(params: dict[str, float]) -> float:
+            omega = params.get("omega", 0.0)
+            alpha = params.get("alpha", 0.0)
+            beta = params.get("beta", 0.0)
+            persistence = alpha + beta
+            if persistence >= 0.9999:
+                return 1e6
+            return omega / max(1.0 - persistence, 1e-8)
+
+        base_value = garch_unconditional_var(base_params)
+
+        # Build parameter ranges (±20% perturbation)
+        param_ranges: dict[str, tuple[float, float]] = {}
+        skippable = {"mu", "nu"}  # skip mean and degrees of freedom
+        for name, val in base_params.items():
+            if name in skippable or val == 0:
+                continue
+            param_ranges[name] = (val * 0.8, val * 1.2)
+
+        analyzer = SensitivityAnalyzer(base_params)
+        tornado_df = analyzer.tornado_diagram(param_ranges, garch_unconditional_var)
+
+        variables: list[SensitivityVariable] = []
+        for _, row in tornado_df.iterrows():
+            low_val = _safe_float(row["low"])
+            high_val = _safe_float(row["high"])
+            base_val = _safe_float(row["base"])
+            impact = abs(high_val - low_val)
+            sensitivity_pct = (impact / abs(base_val) * 100.0) if base_val != 0 else 0.0
+
+            variables.append(SensitivityVariable(
+                name=str(row["param_name"]),
+                low=low_val,
+                high=high_val,
+                base=base_val,
+                sensitivity_pct=_safe_float(sensitivity_pct),
+            ))
+
+        return SensitivityResponse(
+            base_value=_safe_float(base_value),
+            variables=variables,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
