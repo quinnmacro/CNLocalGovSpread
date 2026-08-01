@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Card } from "@/components/ui/card";
 import { fmt } from "@/lib/utils";
@@ -36,7 +35,10 @@ export function ConfidenceSlider({
       </div>
       <Slider
         value={[value]}
-        onValueChange={(v: number[]) => onChange(v[0])}
+        onValueChange={(v) => {
+          const val = Array.isArray(v) ? v[0] : v;
+          onChange(val);
+        }}
         min={min}
         max={max}
         step={step}

@@ -46,7 +46,7 @@ export function DistributionChart({ series, height = 400 }: DistributionChartPro
       marker: { color },
       nbinsx: 50,
       showlegend: false,
-    });
+    } as Partial<Data>);
 
     // KDE line
     traces.push({

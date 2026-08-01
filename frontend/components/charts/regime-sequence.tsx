@@ -29,16 +29,16 @@ export function RegimeSequenceChart({
   const traces: Data[] = [];
 
   // Background colored bands for regimes
-  const shapes: Shape[] = [];
+  const shapes: Partial<Shape>[] = [];
   if (labels.length > 1) {
     for (let i = 0; i < labels.length - 1; i++) {
       shapes.push({
-        type: "rect" as const,
+        type: "rect",
         x0: labels[i].date,
         x1: labels[i + 1].date,
         y0: 0,
         y1: 1,
-        yref: "paper" as const,
+        yref: "paper",
         fillcolor: regimeColors[labels[i].regime % regimeColors.length],
         opacity: 0.15,
         line: { width: 0 },
@@ -90,7 +90,7 @@ export function RegimeSequenceChart({
     <PlotlyChart
       data={traces}
       layout={{
-        shapes: shapes as unknown as Partial<Shape>[],
+        shapes,
         xaxis: { title: { text: "日期" } },
         yaxis: { title: { text: volatility ? "波动率" : "利差 (bps)" } },
         annotations,

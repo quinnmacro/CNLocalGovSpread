@@ -35,7 +35,7 @@ export function HillPlot({ hill, height = 350 }: HillPlotProps) {
     <PlotlyChart
       data={traces}
       layout={{
-        xaxis: { title: { text: "k 分位数 (%)", range: [0, 0.2] } },
+        xaxis: { title: { text: "k 分位数 (%)" }, range: [0, 0.2] },
         yaxis: { title: { text: "尾指数 (ξ)" } },
         legend: { orientation: "h", y: -0.2 },
         hovermode: "x unified",
