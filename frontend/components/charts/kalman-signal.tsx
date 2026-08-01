@@ -142,17 +142,19 @@ export function KalmanSignalChart({
       layout={{
         shapes,
         annotations,
-        grid: { rows: 2, columns: 1, pattern: "independent", subplots: [["xy"], ["x2y2"]] },
         xaxis: {
           title: { text: "" },
-          rangeslider: { visible: false },
+          domain: [0, 1],
+          anchor: "y",
         },
         yaxis: {
           title: { text: "利差 (bps)" },
-          domain: [0.52, 1],
+          domain: [0.55, 1],
         },
         xaxis2: {
           title: { text: "日期" },
+          domain: [0, 1],
+          anchor: "y2",
           matches: "x",
         },
         yaxis2: {
