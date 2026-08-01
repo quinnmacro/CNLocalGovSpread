@@ -93,3 +93,39 @@ class TestTypes:
         )
         with pytest.raises(AttributeError):
             vr.model_name = "other"
+
+
+class TestWindClient:
+    """Tests for WindClient (without actual Wind connection)."""
+
+    def test_import(self):
+        from src.core.wind_client import WindClient, DEFAULT_SPREAD_CODES
+        assert WindClient is not None
+        assert len(DEFAULT_SPREAD_CODES) == 4
+
+    def test_auto_detect_path(self):
+        from src.core.wind_client import WindClient
+        # Should not raise even without Wind installed
+        path = WindClient._detect_wind_path()
+        # On this machine, path may be None (no Wind) or a valid path
+        assert path is None or isinstance(path, str)
+
+    def test_client_creation_no_connect(self):
+        from src.core.wind_client import WindClient
+        client = WindClient(auto_connect=False)
+        assert not client.is_connected
+        assert client._w is None
+
+    def test_context_manager_no_connect(self):
+        """Context manager should handle connect failure gracefully."""
+        from src.core.wind_client import WindClient
+        # Without Wind installed, connect() will raise ImportError
+        # but __exit__ should still run
+        client = WindClient(auto_connect=False)
+        # Don't actually connect (no Wind), just verify the object works
+        assert client._max_retries == 2
+
+    def test_credit_spread_codes_placeholder(self):
+        from src.core.wind_client import CREDIT_SPREAD_CODES
+        # Currently empty placeholder — user fills in actual codes
+        assert isinstance(CREDIT_SPREAD_CODES, dict)

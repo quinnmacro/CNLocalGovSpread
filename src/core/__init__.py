@@ -29,6 +29,7 @@ from src.core.base import (
     VolatilityModel,
 )
 from src.core.data_engine import DataEngine
+from src.core.wind_client import WindClient, DEFAULT_SPREAD_CODES, CREDIT_SPREAD_CODES
 from src.core.simulator import SimulatorParams, SpreadSimulator
 from src.core.logging_config import get_logger, setup_logging
 
@@ -43,7 +44,7 @@ __all__ = [
     "VolatilityModel", "SignalExtractor", "RiskAnalyzer",
     "NotFittedError", "ConvergenceError", "InsufficientDataError",
     # Data
-    "DataEngine", "SpreadSimulator", "SimulatorParams",
+    "DataEngine", "WindClient", "DEFAULT_SPREAD_CODES", "CREDIT_SPREAD_CODES", "SpreadSimulator", "SimulatorParams",
     # Logging
     "get_logger", "setup_logging",
 ]

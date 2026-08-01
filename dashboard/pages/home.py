@@ -133,7 +133,7 @@ def layout():
                                 html.Th("指标"), html.Th("得分", style={"width": "60%"}),
                                 html.Th("值", className="text-end"),
                             ]))] + [html.Tbody(indicator_rows)],
-                            borderless=True, dark=True, size="sm",
+                            borderless=True, color="dark", size="sm",
                         ),
                     ]),
                 ], color="dark", className="border-0 shadow-sm"),

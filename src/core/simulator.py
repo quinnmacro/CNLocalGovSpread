@@ -107,10 +107,10 @@ class SpreadSimulator:
 
         for t in range(1, n_steps):
             sigma2[t] = p.omega + p.alpha * shocks[t - 1] ** 2 + p.beta * sigma2[t - 1]
-            shocks[t] = np.sqrt(sigma2[t]) * z[t]
+            shocks[t] = np.sqrt(np.maximum(sigma2[t], 0.0)) * z[t]
             spread[t] = p.mu + p.phi * (spread[t - 1] - p.mu) + shocks[t]
 
-        return spread, np.sqrt(sigma2)
+        return spread, np.sqrt(np.maximum(sigma2, 0.0))
 
     def simulate_multi_path(
         self,
@@ -144,10 +144,10 @@ class SpreadSimulator:
             sigma2[:, t] = (
                 p.omega + p.alpha * shocks[:, t - 1] ** 2 + p.beta * sigma2[:, t - 1]
             )
-            shocks[:, t] = np.sqrt(sigma2[:, t]) * z[:, t]
+            shocks[:, t] = np.sqrt(np.maximum(sigma2[:, t], 0.0)) * z[:, t]
             paths[:, t] = p.mu + p.phi * (paths[:, t - 1] - p.mu) + shocks[:, t]
 
-        return paths, np.sqrt(sigma2)
+        return paths, np.sqrt(np.maximum(sigma2, 0.0))
 
     def simulate_scenario(
         self,

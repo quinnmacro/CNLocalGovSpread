@@ -59,7 +59,7 @@ def _regime_stats_table(result) -> dbc.Table:
         color = ["success", "warning", "danger", "secondary"][r % 4]
 
         rows.append(html.Tr([
-            html.Td(html.Badge(name, color=color)),
+            html.Td(dbc.Badge(name, color=color)),
             html.Td(f"{mean_vol:.3f}", className="text-end"),
             html.Td(f"{std_vol:.3f}", className="text-end"),
             html.Td(f"{count}", className="text-end"),
@@ -73,7 +73,7 @@ def _regime_stats_table(result) -> dbc.Table:
             html.Th("天数", className="text-end"),
             html.Th("占比", className="text-end"),
         ]))] + [html.Tbody(rows)],
-        borderless=True, dark=True, size="sm", hover=True,
+        borderless=True, color="dark", size="sm", hover=True,
     )
 
 
