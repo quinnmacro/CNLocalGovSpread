@@ -68,6 +68,11 @@ all = [
 Homepage = "https://quinnmacro.com"
 Repository = "https://github.com/quinnmacro/CNLocalGovSpread"
 
+
+[project.scripts]
+cls-dashboard = "dashboard.app:run_server"
+cls-api = "api.app:run_server"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
 
