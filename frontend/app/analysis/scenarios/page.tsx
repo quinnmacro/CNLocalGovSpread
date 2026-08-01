@@ -5,7 +5,7 @@ const pageInfo = {
   subtitle: "Scenarios — 蒙特卡洛模拟与压力测试",
 };
 
-export const metadata = { title: `${pageInfo.title} | QuinnMacro` };
+export const metadata = { title: pageInfo.title };
 
 export default function Page() {
   return <ScenariosContent />;

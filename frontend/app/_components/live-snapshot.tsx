@@ -47,7 +47,12 @@ export function LiveSnapshot() {
           label="历史分位"
           value={
             mean != null && std != null && latestSpread != null
-              ? `${Math.round(((latestSpread - mean) / std) * 20 + 50)}th`
+              ? `${(() => {
+                const n = Math.round(((latestSpread - mean) / std) * 20 + 50);
+                const s = ["th", "st", "nd", "rd"];
+                const v = n % 100;
+                return n + (s[(v - 20) % 10] || s[v] || s[0]);
+              })()}`
               : "—"
           }
           decimals={0}
@@ -65,7 +70,6 @@ export function LiveSnapshot() {
           value={statusZh}
           decimals={0}
           icon={<Gauge className="h-4 w-4" />}
-          change={composite != null ? composite : null}
           changeLabel="composite"
         />
       )}

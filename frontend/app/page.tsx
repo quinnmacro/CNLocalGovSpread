@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-  Activity,
+
   BarChart3,
   LineChart,
   Shield,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { NavigationCard } from "@/components/narrative/navigation-card";
 import { LiveSnapshot } from "./_components/live-snapshot";
+import { HeroDataBadge } from "./_components/hero-data-badge";
 import { Separator } from "@/components/ui/separator";
 
 const modules = [
@@ -24,7 +25,7 @@ const modules = [
     title: "利差全景",
     titleEn: "Overview",
     description:
-      "2018–2026 年地方债信用利差的趋势、分布、期限结构全景分析。厚尾、尖峰、状态切换——数据讲了什么故事？",
+      "地方债信用利差的趋势、分布、期限结构全景分析。厚尾、尖峰、状态切换——数据讲了什么故事？",
   },
   {
     href: "/analysis/volatility",
@@ -48,7 +49,7 @@ const modules = [
     title: "市场状态",
     titleEn: "Regimes",
     description:
-      "隐马尔可夫模型 (HMM) + 多指标 MarketGauge。当前市场处于什么状态？状态如何转换？",
+      "HMM + STS + Bayesian STS + CPD 多维状态识别。趋势信号、偏离度、后验不确定性与结构性断裂点——当前市场处于什么状态？",
   },
   {
     href: "/analysis/scenarios",
@@ -73,10 +74,7 @@ export default function HomePage() {
         <div className="relative max-w-5xl mx-auto px-4 md:px-6 py-20 md:py-28">
           <div className="flex flex-col items-center text-center">
             <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-1.5 mb-6">
-              <Activity className="h-3.5 w-3.5 text-primary" />
-              <span className="text-xs font-medium text-primary">
-                实时量化分析 · 2018–2026 · 2054 交易日
-              </span>
+              <HeroDataBadge />
             </div>
 
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground mb-4">
@@ -91,7 +89,9 @@ export default function HomePage() {
               基于{" "}
               <span className="font-mono text-primary/80">GARCH</span> /{" "}
               <span className="font-mono text-primary/80">EVT</span> /{" "}
-              <span className="font-mono text-primary/80">HMM</span>{" "}
+              <span className="font-mono text-primary/80">HMM</span> /{" "}
+              <span className="font-mono text-primary/80">STS</span> /{" "}
+              <span className="font-mono text-primary/80">Bayesian</span>{" "}
               的利差建模、风险度量与状态监控系统
             </p>
 
@@ -142,7 +142,7 @@ export default function HomePage() {
               理解利差的波动特征、尾部风险和市场状态，对组合管理、风险控制和策略研究具有直接意义。
             </p>
             <p>
-              本平台基于 2018–2026 年的日频利差数据（2054 个交易日），构建了完整的量化分析流水线：
+              本平台基于日频利差数据，构建了完整的量化分析流水线：
             </p>
             <ul className="space-y-2 pl-4 border-l-2 border-primary/30 ml-2">
               <li className="flex items-start gap-2">
@@ -162,8 +162,8 @@ export default function HomePage() {
               <li className="flex items-start gap-2">
                 <span className="text-primary font-mono text-sm mt-0.5">03</span>
                 <span>
-                  <strong className="text-foreground">状态识别</strong> — 隐马尔可夫模型 (HMM)
-                  + 多指标复合 MarketGauge
+                  <strong className="text-foreground">状态识别</strong> — HMM + 结构化时间序列 (STS)
+                  + 贝叶斯推断 + 结构性变化点检测
                 </span>
               </li>
               <li className="flex items-start gap-2">
@@ -211,8 +211,8 @@ export default function HomePage() {
             <FrameworkStep
               icon={<GitBranch className="h-5 w-5" />}
               title="Regimes"
-              subtitle="HMM + Gauge"
-              detail="状态识别 · MarketGauge"
+              subtitle="HMM+STS+Bayes+CPD"
+              detail="多维状态 · 信号提取"
             />
             <FrameworkStep
               icon={<Target className="h-5 w-5" />}

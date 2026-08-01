@@ -5,7 +5,7 @@ const pageInfo = {
   subtitle: "Overview — 趋势、分布、期限结构、分布特征",
 };
 
-export const metadata = { title: `${pageInfo.title} | QuinnMacro` };
+export const metadata = { title: pageInfo.title };
 
 export default function Page() {
   return <OverviewContent />;

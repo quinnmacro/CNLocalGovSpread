@@ -36,7 +36,7 @@ export function VolatilityContent() {
   const fitCustom = useFitCustom();
 
   // Default to winner_aic or first model
-  const defaultModel = tournament?.winner_aic ?? tournament?.models[0]?.model_name ?? "garch-studentst";
+  const defaultModel = tournament?.winner_aic?.toLowerCase() ?? tournament?.models[0]?.model_name?.toLowerCase() ?? "garch";
   const [selectedModel, setSelectedModel] = useState<string>(defaultModel);
 
   // Update selected model when tournament data loads
@@ -46,8 +46,8 @@ export function VolatilityContent() {
     }
   }, [tournament, selectedModel, defaultModel]);
 
-  const { data: modelDetail, isLoading: detailLoading } = useModelDetail(selectedModel, {
-    enabled: !!selectedModel,
+  const { data: modelDetail, isLoading: detailLoading } = useModelDetail(selectedModel?.toLowerCase(), {
+    enabled: !!selectedModel && /^(garch|egarch|gjr|ewma|figarch)$/.test(selectedModel.toLowerCase()),
   });
 
   const isLoading = tournamentLoading || figarchLoading;

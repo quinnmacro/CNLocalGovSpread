@@ -26,7 +26,7 @@ const PAGE_INFO = {
 
 export function ScenariosContent() {
   const [horizon, setHorizon] = useState(252);
-  const { data: scenarios, isLoading: scenariosLoading, error: scenariosError } = useScenarios(horizon, 5000);
+  const { data: scenarios, isLoading: scenariosLoading, error: scenariosError } = useScenarios(horizon, 1000);
   const stress = useStress();
 
   const isLoading = scenariosLoading;
@@ -39,7 +39,7 @@ export function ScenariosContent() {
         current: scenarios.current_spread,
         shock_multipliers: [1.0, 1.5, 2.0, 3.0],
         horizon: horizon,
-        n_paths: 5000,
+        n_paths: 1000,
       });
     }
   };

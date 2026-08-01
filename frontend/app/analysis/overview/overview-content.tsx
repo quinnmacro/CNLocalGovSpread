@@ -131,7 +131,7 @@ export function OverviewContent() {
         <Section index={1} title="数据来源与统计概览" subtitle="Data & Summary Statistics">
           <ProseBlock>
             <p>
-              数据来自 Wind EDB，时间跨度 {summary?.date_range[0]} 至 {summary?.date_range[1]}，
+              数据来自 Wind EDB，时间跨度 {summary?.date_range[0]?.slice(0, 10)} 至 {summary?.date_range[1]?.slice(0, 10)}，
               共 {summary?.n_rows} 个交易日，包含 4 个利差序列：全品种、5Y、10Y、30Y。
             </p>
           </ProseBlock>

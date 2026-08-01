@@ -5,7 +5,7 @@ const pageInfo = {
   subtitle: "Volatility — GARCH 族模型对比与诊断",
 };
 
-export const metadata = { title: `${pageInfo.title} | QuinnMacro` };
+export const metadata = { title: pageInfo.title };
 
 export default function Page() {
   return <VolatilityContent />;
