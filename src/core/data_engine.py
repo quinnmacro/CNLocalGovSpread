@@ -22,13 +22,6 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-# Wind EDB indicator codes for China local gov spreads
-_WIND_EDB_CODES: dict[str, str] = {
-    "spread_all": "M0017142",
-    "spread_5y": "M0017143",
-    "spread_10y": "M0017144",
-    "spread_30y": "M0017145",
-}
 
 REQUIRED_COLUMNS = ["date", "spread_all", "spread_5y", "spread_10y", "spread_30y"]
 
@@ -181,38 +174,22 @@ class DataEngine:
 
     def _load_wind(self) -> pd.DataFrame:
         """
-        Load data from Wind Financial Terminal via WindPy.
-        Uses w.edb() to fetch EDB indicators M0017142–M0017145.
+        Load data from Wind Financial Terminal via WindClient.
+        Uses managed connection with auto-path detection and retry.
         """
-        try:
-            from WindPy import w  # type: ignore[import-not-found]
-        except ImportError as exc:
-            raise ImportError(
-                "WindPy is not installed. Install with: pip install WindPy  "
-                "or change DataConfig.source to 'mock' or 'csv'."
-            ) from exc
-
-        if not w.isconnected():
-            logger.info("Connecting to Wind terminal...")
-            w.start()
+        from src.core.wind_client import WindClient, DEFAULT_SPREAD_CODES
 
         start_date = self._config.start_date
         end_date = pd.Timestamp.now().strftime("%Y-%m-%d")
 
-        logger.info("Fetching Wind EDB data: %s to %s", start_date, end_date)
+        with WindClient() as client:
+            df = client.fetch_edb(
+                codes=DEFAULT_SPREAD_CODES,
+                start_date=start_date,
+                end_date=end_date,
+                fill_method="Previous",
+            )
 
-        frames = []
-        for col_name, edb_code in _WIND_EDB_CODES.items():
-            raw = w.edb(edb_code, start_date, end_date, "Fill=Previous")
-            if raw.ErrorCode != 0:
-                raise RuntimeError(
-                    f"Wind EDB error for {edb_code}: code={raw.ErrorCode}, msg={raw.Data}"
-                )
-            series = pd.Series(raw.Data[0], index=pd.to_datetime(raw.Times), name=col_name)
-            frames.append(series)
-
-        df = pd.concat(frames, axis=1).reset_index()
-        df = df.rename(columns={"index": "date"})
         logger.info("Wind data loaded: %d rows", len(df))
         return df
 
