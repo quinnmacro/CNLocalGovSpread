@@ -9,7 +9,7 @@ interface HorizonSliderProps {
   min?: number;
   max?: number;
   step?: number;
-  presets?: number[];
+  presets?: { value: number; label: string }[];
 }
 
 const DEFAULT_PRESETS = [
@@ -37,7 +37,10 @@ export function HorizonSlider({
       </div>
       <Slider
         value={[value]}
-        onValueChange={(v: number[]) => onChange(v[0])}
+        onValueChange={(v) => {
+          const val = Array.isArray(v) ? v[0] : v;
+          onChange(val);
+        }}
         min={min}
         max={max}
         step={step}
