@@ -230,3 +230,27 @@ export function useChangepoints(
     ...opts,
   });
 }
+
+export function useStsSignal(
+  column = "spread_all",
+  opts?: Omit<UseQueryOptions<T.STSSignalResponse>, "queryKey" | "queryFn">
+) {
+  return useQuery({
+    queryKey: ["regimes", "sts", column] as const,
+    queryFn: () => api.stsSignal(column),
+    staleTime: 5 * 60 * 1000,
+    ...opts,
+  });
+}
+
+export function useBayesianSts(
+  column = "spread_all",
+  opts?: Omit<UseQueryOptions<T.BayesianSTSResponse>, "queryKey" | "queryFn">
+) {
+  return useQuery({
+    queryKey: ["regimes", "bayesian-sts", column] as const,
+    queryFn: () => api.bayesianSts(column),
+    staleTime: 5 * 60 * 1000,
+    ...opts,
+  });
+}

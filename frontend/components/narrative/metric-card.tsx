@@ -15,7 +15,17 @@ interface MetricCardProps {
   sparkline?: number[];
   className?: string;
   icon?: React.ReactNode;
+  /** Accent color for top border: "blue" | "green" | "orange" | "pink" | "cyan" */
+  accent?: "blue" | "green" | "orange" | "pink" | "cyan";
 }
+
+const accentMap = {
+  blue: "accent-border-blue",
+  green: "accent-border-green",
+  orange: "accent-border-orange",
+  pink: "accent-border-pink",
+  cyan: "accent-border-cyan",
+} as const;
 
 function TrendIcon({ change }: { change?: number | null }) {
   if (change == null || change === 0)
@@ -30,8 +40,8 @@ function MiniSparkline({ data }: { data: number[] }) {
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
-  const h = 24;
-  const w = 60;
+  const h = 28;
+  const w = 80;
   const points = data
     .map((v, i) => {
       const x = (i / (data.length - 1)) * w;
@@ -40,6 +50,9 @@ function MiniSparkline({ data }: { data: number[] }) {
     })
     .join(" ");
 
+  // Gradient fill area
+  const areaPoints = `0,${h} ${points} ${w},${h}`;
+
   return (
     <svg
       width={w}
@@ -47,6 +60,16 @@ function MiniSparkline({ data }: { data: number[] }) {
       className="text-primary/60"
       aria-hidden="true"
     >
+      <defs>
+        <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.2" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon
+        fill="url(#sparkGrad)"
+        points={areaPoints}
+      />
       <polyline
         fill="none"
         stroke="currentColor"
@@ -58,7 +81,8 @@ function MiniSparkline({ data }: { data: number[] }) {
 }
 
 /**
- * Metric display card: value + trend + optional sparkline.
+ * Metric display card with institutional aesthetic:
+ * gradient top accent, hover glow, mono typography.
  */
 export function MetricCard({
   label,
@@ -70,6 +94,7 @@ export function MetricCard({
   sparkline,
   className,
   icon,
+  accent,
 }: MetricCardProps) {
   const displayValue =
     typeof value === "string"
@@ -80,26 +105,36 @@ export function MetricCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3 }}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
     >
-      <Card className={cn("metric-card p-4", className)}>
-        <div className="flex items-start justify-between mb-1">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+      <Card
+        className={cn(
+          "metric-card glow-hover p-4 relative overflow-hidden",
+          accent && accentMap[accent],
+          className,
+        )}
+      >
+        <div className="flex items-start justify-between mb-2">
+          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest leading-none">
             {label}
           </span>
-          {icon && <span className="text-muted-foreground">{icon}</span>}
+          {icon && (
+            <span className="text-muted-foreground/70 shrink-0">{icon}</span>
+          )}
         </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-bold font-mono text-foreground">
+        <div className="flex items-baseline gap-1.5 mb-1">
+          <span className="text-2xl font-bold font-mono text-foreground tracking-tight">
             {displayValue}
           </span>
           {unit && (
-            <span className="text-sm text-muted-foreground">{unit}</span>
+            <span className="text-xs text-muted-foreground font-medium">
+              {unit}
+            </span>
           )}
         </div>
-        <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center justify-between mt-2.5">
           <div className="flex items-center gap-1.5">
             <TrendIcon change={change} />
             {change != null && (
@@ -110,7 +145,7 @@ export function MetricCard({
                     ? "text-chart-3"
                     : change < 0
                     ? "text-chart-2"
-                    : "text-muted-foreground"
+                    : "text-muted-foreground",
                 )}
               >
                 {change > 0 ? "+" : ""}
@@ -118,7 +153,7 @@ export function MetricCard({
               </span>
             )}
             {changeLabel && (
-              <span className="text-xs text-muted-foreground ml-1">
+              <span className="text-[11px] text-muted-foreground ml-0.5">
                 {changeLabel}
               </span>
             )}
