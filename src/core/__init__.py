@@ -13,11 +13,13 @@ from src.core.config import (
 )
 from src.core.types import (
     BacktestResult,
+    BayesianSTSResult,
     DiagnosticsResult,
     ForecastTestResult,
     RegimeResult,
     RiskResult,
     SignalResult,
+    STSResult,
     VolatilityResult,
 )
 from src.core.base import (
@@ -38,7 +40,8 @@ __all__ = [
     "Settings", "get_settings", "DataConfig", "DataSource",
     "RiskConfig", "ModelConfig", "DashboardConfig",
     # Types
-    "DiagnosticsResult", "VolatilityResult", "SignalResult",
+    "DiagnosticsResult", "VolatilityResult", "SignalResult", "STSResult",
+    "BayesianSTSResult",
     "RiskResult", "RegimeResult", "BacktestResult", "ForecastTestResult",
     # Base
     "VolatilityModel", "SignalExtractor", "RiskAnalyzer",

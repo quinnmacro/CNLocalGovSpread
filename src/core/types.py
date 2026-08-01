@@ -229,3 +229,69 @@ class ForecastTestResult:
         if self.mcs_pvalue is not None:
             lines.append(f"  MCS p={self.mcs_pvalue:.4f}, in_set={self.in_confidence_set}")
         return "\n".join(lines)
+
+
+
+@dataclass(frozen=True)
+class STSResult:
+    """Signal extraction result from Structural Time Series model."""
+
+    method: str
+    signal: pd.Series  # level component (smoothed trend)
+    trend: pd.Series  # slope component (drift/speed of trend change)
+    deviation: pd.Series  # y_t - level
+    deviation_zscore: pd.Series  # normalized deviation
+    level: pd.Series  # level component
+    slope: pd.Series  # slope/drift component
+    irregular: pd.Series  # irregular (noise) component
+    signal_strength: float = field(default=0.0)
+    is_overvalued: bool = False
+    is_undervalued: bool = False
+    aic: float = 0.0
+    bic: float = 0.0
+    n_params: int = 0
+    sigma2_level: float = 0.0
+    sigma2_trend: float = 0.0
+    sigma2_irregular: float = 0.0
+
+    @property
+    def current_deviation(self) -> float:
+        return float(self.deviation.iloc[-1])
+
+    def summary(self) -> str:
+        return (
+            f"STSResult ({self.method}):\n"
+            f"  Current signal: {self.signal.iloc[-1]:.2f}\n"
+            f"  Deviation: {self.current_deviation:.2f} (z={self.deviation_zscore.iloc[-1]:.2f})\n"
+            f"  Signal strength: {self.signal_strength:.2f}\n"
+            f"  AIC={self.aic:.2f}, BIC={self.bic:.2f}, params={self.n_params}\n"
+            f"  \u03c3\u00b2 level={self.sigma2_level:.6f}, trend={self.sigma2_trend:.6f}, irregular={self.sigma2_irregular:.6f}"
+        )
+
+
+@dataclass(frozen=True)
+class BayesianSTSResult(SignalResult):
+    """Bayesian STS result with posterior credible intervals.
+
+    Extends SignalResult so it satisfies the SignalExtractor ABC contract
+    while adding Bayesian-specific fields (credible intervals, hyper-parameter
+    posteriors, fitting diagnostics).
+    """
+
+    # Bayesian-specific fields (all have defaults to preserve parent field order)
+    signal_lower: pd.Series = field(default_factory=lambda: pd.Series(dtype=float))
+    signal_upper: pd.Series = field(default_factory=lambda: pd.Series(dtype=float))
+    ci_width_mean: float = 0.0
+    sigma_level_mean: float = 0.0
+    sigma_obs_mean: float = 0.0
+    n_samples: int = 0
+    fitting_time_sec: float = 0.0
+
+    def summary(self) -> str:
+        base = super().summary()
+        bayes_lines = [
+            f"  95% CI width (mean): {self.ci_width_mean:.4f}",
+            f"  \u03c3_level={self.sigma_level_mean:.6f}, \u03c3_obs={self.sigma_obs_mean:.6f}",
+            f"  Samples: {self.n_samples}, fitting time: {self.fitting_time_sec:.1f}s",
+        ]
+        return base + "\n" + "\n".join(bayes_lines)
