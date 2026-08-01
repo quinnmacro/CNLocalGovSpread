@@ -14,7 +14,7 @@ class TestHMMRegime:
 
         ewma = EWMAModel()
         ewma.fit(mock_returns)
-        vol = ewma.result.volatility
+        vol = ewma.result.conditional_volatility
 
         det = HMMRegimeDetector(n_regimes=3)
         result = det.fit(vol)
@@ -30,7 +30,7 @@ class TestHMMRegime:
 
         ewma = EWMAModel()
         ewma.fit(mock_returns)
-        vol = ewma.result.volatility
+        vol = ewma.result.conditional_volatility
 
         det = HMMRegimeDetector(n_regimes=3)
         result = det.fit(vol)
