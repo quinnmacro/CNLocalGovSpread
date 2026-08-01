@@ -40,8 +40,8 @@ def create_app() -> Dash:
         dbc.Navbar(
             dbc.Container([
                 dbc.NavbarBrand([
-                    html.span("QuinnMacro", className="fw-bold me-2"),
-                    html.span("CN Local Gov Spread", className="text-muted"),
+                    html.Span("QuinnMacro", className="fw-bold me-2"),
+                    html.Span("CN Local Gov Spread", className="text-muted"),
                 ], href="/"),
                 dbc.Nav([
                     dbc.NavItem(dbc.NavLink("Overview", href="/")),
@@ -61,7 +61,7 @@ def create_app() -> Dash:
 
         # Footer
         dbc.Container([
-            html.hr(),
+            html.Hr(),
             html.P(
                 "© 2026 QuinnMacro | Advanced Econometric Framework v4.0",
                 className="text-muted text-center small",
