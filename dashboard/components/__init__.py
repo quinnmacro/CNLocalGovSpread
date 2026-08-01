@@ -1,3 +1,1 @@
-"""
-Dashboard components for CNLocalGovSpread v4.0
-"""
+"""dashboard/components"""
