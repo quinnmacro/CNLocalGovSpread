@@ -5,6 +5,103 @@ All notable changes to the CNLocalGovSpread project will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+
+## [4.1.0] - 2026-08-01
+
+### Phase 5: Advanced State Space Methods + UI/UX Overhaul
+
+#### Added — Backend (Regimes Advanced Methods)
+- **Kalman Filter signal extraction endpoint** (`GET /regimes/kalman-signal`): Wraps `KalmanSignalExtractor` from `src/models/kalman.py`, returns signal, deviation, z-score, signal_strength, is_overvalued/is_undervalued, σ²_η, σ²_ε, Q-ratio
+- **Change Point Detection endpoint** (`GET /regimes/changepoints`): Uses `ruptures` library with BinSeg/PELT methods, returns breakpoint dates + segment means + cost reduction
+- **Structural Time Series endpoint** (`GET /regimes/sts-signal`): `statsmodels.tsa.statespace.structural.UnobservedComponents` with level+slope decomposition, returns level, slope, deviation, z-score
+- **Bayesian STS endpoint** (`GET /regimes/bayesian-sts`): PyMC posterior inference with 80% credible intervals, returns posterior mean/median + CI bands + convergence diagnostics (R-hat, effective sample size)
+- **4 new Pydantic response schemas** in `api/schemas.py`: `KalmanSignalResponse`, `ChangepointResponse`, `STSSignalResponse`, `BayesianSTSResponse`
+- **Mock data generators** for all 4 new endpoints in `api/app.py`
+
+#### Added — Frontend (Charts & Visualization)
+- **`kalman-signal.tsx`** (220L): Dual-panel chart — upper: raw spread + Kalman trend line; lower: z-score deviation with ±1.5 threshold + colored background (red=overvalued, green=undervalued) + event annotations
+- **`changepoint.tsx`** (146L): Time series with vertical dashed lines at detected breakpoints + segment mean levels between breakpoints
+- **`sts-signal.tsx`** (215L): 3-panel decomposition — level trend, slope (velocity), deviation z-score with threshold bands
+- **`bayesian-sts.tsx`** (178L): Posterior mean with 80% credible interval ribbon + convergence diagnostics badge (R-hat indicator)
+
+#### Added — Frontend (Regimes Page Overhaul)
+- **Signal Dashboard**: 4 MetricCards at page top — z-score (current deviation), signal strength, number of changepoints, current HMM regime
+- **Method comparison table**: Side-by-side comparison of Kalman vs STS vs Bayesian vs CPD (approach, key parameter, current signal, complementarity)
+- **TOC (Table of Contents)**: Floating sidebar with section links + IntersectionObserver scroll-spy highlighting
+- **5 KaTeX formula blocks**: HMM transition, Kalman observation/state equations, STS decomposition, Bayesian prior specification, CPD cost function
+- **Complementary narrative**: Cross-method validation insight cards showing how HMM states align with Kalman deviations and CPD breakpoints
+
+#### Added — Frontend (Infrastructure)
+- **`use-scroll-spy.ts`** hook: IntersectionObserver-based scroll spy for TOC navigation with configurable offset
+- **4 new API hooks** in `use-api.ts`: `useKalmanSignal`, `useChangepoints`, `useStsSignal`, `useBayesianSts`
+- **4 new TypeScript interfaces** in `types.ts`: `KalmanSignalResponse`, `ChangepointResponse`, `STSSignalResponse`, `BayesianSTSResponse`
+- **4 new API client methods** in `api.ts`: `kalmanSignal`, `changepoints`, `stsSignal`, `bayesianSts`
+
+#### Changed — UI/UX Overhaul
+- **`globals.css`** expanded from 150L to 434L: Added semantic surface colors (info/warning/success), prose-narrative typography system, chart-container styling, skeleton shimmer animation, gradient-text utility, pulse-slow/fade-in/slide-up keyframes
+- **`metric-card.tsx`** enhanced with sparkline visualization (last 30 data points) and trend indicator icons (up/down/flat)
+- **`chart-wrapper.tsx`** added as standardized chart container with title, optional description, and consistent border/padding
+- **`insight-card.tsx`** refined with 3 variants (info/warning/success) and improved icon styling
+- **`section.tsx`** enhanced with anchor links for TOC integration
+- **All 5 analysis pages** restructured to separate `page.tsx` (wrapper) from `*-content.tsx` (actual content)
+
+#### Verification
+- ✅ `npx tsc --noEmit`: 0 errors (TypeScript strict)
+- ✅ `npx next build`: success (all 7 routes static)
+- ✅ `python3.13 -m pytest tests/ -v`: 53 passed (unchanged)
+- ✅ All 21 API endpoints verified with mock data
+
+---
+
+## [4.0.0] - 2026-08-01
+
+### Phase 3–4: Next.js Frontend Rewrite + 5 Analysis Pages
+
+#### Added — API Layer (Phase 2)
+- **FastAPI REST layer** (`api/`): 17 endpoints under `/api/v1/` prefix
+- **30 Pydantic v2 response models** in `api/schemas.py` covering all data, model, risk, regime, and scenario responses
+- **Mock data generator** in `api/app.py` for development without real CSV data
+- **10 new endpoints**: `/data/statistics`, `/models/tournament`, `/models/{name}/detail`, `/models/figarch`, `/models/fit-custom`, `/risk/evt`, `/risk/backtest`, `/regimes/hmm`, `/scenarios/stress`, `/analysis/sensitivity`
+
+#### Added — Frontend Infrastructure (Phase 1–2)
+- **Next.js 16 + TypeScript strict** project with App Router
+- **Tailwind CSS v4** with CSS-first configuration (`@theme inline` in globals.css)
+- **shadcn/ui v4** component library using `@base-ui/react` (21 UI primitives)
+- **Plotly** chart system with `next/dynamic` (ssr: false) and dark theme defaults
+- **KaTeX** math rendering via `react-katex` with type declarations
+- **TanStack Query v5** for data fetching with 17 typed hooks
+- **Framer Motion** for page transitions and stagger animations
+- **Next.js rewrites proxy** (`next.config.ts`) routing `/api/*` to FastAPI backend
+
+#### Added — Frontend Components
+- **10 narrative components**: `Section`, `ProseBlock`, `Formula`, `ReadGuide`, `ParamTooltip`, `InsightCard`, `MetricCard`, `NavigationCard`, `ChartWrapper`, `NavigationCard`
+- **12 chart components**: `PlotlyChart` (base), `TimeSeries`, `Distribution`, `TermStructure`, `VolatilityOverlay`, `TournamentTable`, `ResidualDiagnostics`, `VarComparison`, `HillPlot`, `MeanExcessPlot`, `VarBacktest`, `RegimeSequence`, `TransitionHeatmap`, `MarketGaugePanel`, `FanChart`, `StressTable`
+- **4 interactive components**: `ConfidenceSlider`, `HorizonSlider`, `ModelSelector`, `DataTable`
+- **4 layout components**: `Navbar`, `Sidebar`, `Breadcrumb`, `Footer`
+
+#### Added — Analysis Pages (Phase 3–4)
+- **`/analysis/overview`** (311L): Spread time series, KDE distribution vs normal, term structure scatter, ADF stationarity tests
+- **`/analysis/volatility`** (412L): GARCH tournament table, conditional volatility overlay, FIGARCH long-memory, 4-panel residual diagnostics
+- **`/analysis/risk`** (623L): VaR comparison (Historical/Parametric/EVT), Hill tail index, mean excess plot, Kupiec+Christoffersen backtesting
+- **`/analysis/regimes`** (initial: HMM + MarketGauge only): Regime sequence with background color bands, transition matrix heatmap, 5-dimension market gauge
+- **`/analysis/scenarios`** (386L): Fan chart with percentile bands, Monte Carlo path samples, stress test scenario table
+
+#### Added — Home Page
+- **`/` (root page)** (276L): Hero section with gradient text, LiveSnapshot (4 real-time metric cards), Abstract section, 5-step Framework section, NavigationCards to all analysis pages
+
+#### Changed
+- **Architecture restructured**: `dashboard/` (Dash) marked as legacy; `frontend/` (Next.js) is now the primary UI
+- **53 tests remain passing**: No modifications to `src/` or `tests/`
+
+#### Technical Details
+- TypeScript interfaces mirror all Pydantic schemas (38 interfaces)
+- 20 TanStack Query hooks with automatic caching, stale-time, and refetch-on-mount
+- All Plotly charts use `chartColors` from `plotly-chart.tsx` for consistent dark-theme palette
+- Number formatting via `fmt()` utility (adaptive decimal places)
+- Chinese-primary UI text with English technical terms in parentheses
+
+
 ## [3.0.0] - 2026-04-29
 
 ### Phase 1: Algorithm Depth

@@ -1,6 +1,6 @@
-# CN Local Gov Spread — v4.0
+# CN Local Gov Spread — v4.1
 
-> Advanced econometric framework for China local government bond spread analysis.
+> Advanced econometric framework for China local government bond spread analysis, with a modern Next.js analytical platform.
 
 **Author**: Quinn Liu · `quinn@quinnmacro.com` · [quinnmacro.com](https://quinnmacro.com)
 
@@ -10,7 +10,7 @@
 
 ```
 CNLocalGovSpread/
-├── src/                    # Core quant engine (pure Python, no UI)
+├── src/                    # Core quant engine (pure Python, FROZEN — do not modify)
 │   ├── core/               # Config, types, data engine, Wind client, simulator, base ABCs
 │   ├── models/             # Volatility models: GARCH, FIGARCH, EWMA, Kalman, ML
 │   ├── risk/               # VaR engine, EVT (GPD-POT), backtesting
@@ -18,97 +18,156 @@ CNLocalGovSpread/
 │   ├── regime/             # HMM regime detection, market gauge
 │   ├── analysis/           # Clustering, scenario generation, sensitivity
 │   └── reporting/          # HTML/Excel/JSON report generator
-├── api/                    # FastAPI REST layer
-│   ├── app.py              # Application factory
-│   └── routes.py           # /api/v1/* endpoints
-├── dashboard/              # Dash multi-page dashboard
-│   ├── app.py              # Dash application factory (DARKLY theme)
-│   ├── components/         # Shared charts, data cache
-│   └── pages/              # 5 pages: home, volatility, risk, regimes, scenarios
-├── tests/                  # pytest test suite (53 tests)
+├── api/                    # FastAPI REST layer (21 endpoints)
+│   ├── app.py              # Application factory + mock data generator
+│   ├── routes.py           # /api/v1/* endpoints (1060 lines)
+│   └── schemas.py          # 30 Pydantic v2 response models
+├── frontend/               # Next.js 16 analytical platform (TypeScript strict)
+│   ├── app/analysis/       # 5 analysis pages (overview, volatility, risk, regimes, scenarios)
+│   ├── components/         # 20 chart + 9 narrative + 4 interactive + 21 UI components
+│   ├── hooks/              # 20 TanStack Query hooks + scroll-spy
+│   └── lib/                # API client + TypeScript types + utilities
+├── tests/                  # pytest test suite (53 tests, FROZEN)
 │   ├── unit/               # Per-module unit tests
 │   ├── integration/        # End-to-end pipeline tests
 │   └── validation/         # Statistical validation tests
 ├── scripts/                # CLI entry points
-│   ├── run_dashboard.py    # Dashboard launcher
+│   ├── run_dashboard.py    # Dashboard launcher (legacy)
 │   └── download_data.py    # Wind EDB data downloader
+├── dashboard/              # Legacy Dash multi-page dashboard (pending deprecation)
 ├── legacy/v3.0/            # Archived previous version
 └── pyproject.toml          # PEP 621 build config (hatchling)
 ```
 
 ## Key Features
 
-### Volatility Models
+### Quantitative Engine (`src/`)
+
+#### Volatility Models
 - **GARCH(1,1)**, **EGARCH(1,1)**, **GJR-GARCH** via `arch` library
 - **FIGARCH** with GPH long-memory estimator and π-weight truncation
 - **EWMA** with QLIK-optimal λ calibration (Patton 2011)
 - **Kalman Filter** signal extraction (Local Level Model)
 - **ML Volatility** (XGBoost / LightGBM) with walk-forward CV — no look-ahead bias
 
-### Risk Analysis
+#### Risk Analysis
 - **VaR**: Historical, Parametric-t, EVT-POT, Rolling window
 - **EVT**: GPD-POT fitting, Hill tail index estimator, mean excess plot
 - **Backtesting**: Kupiec unconditional + Christoffersen conditional coverage
 
-### Model Selection
+#### Model Selection
 - **Tournament**: AIC/BIC comparison with residual diagnostics
 - **Diagnostics**: Ljung-Box, ARCH-LM, Jarque-Bera
 - **Forecast Tests**: Diebold-Mariano (HAC), Model Confidence Set (Hansen 2011)
 
-### Regime Detection
+#### Regime Detection & State Space Methods
 - **HMM**: GaussianHMM with regime sorting by mean volatility
 - **Market Gauge**: Sigmoid-based composite stress indicator (5 dimensions)
+- **Kalman Filter**: Local Level Model signal extraction with z-score deviation
+- **Structural Time Series (STS)**: Level + slope decomposition via statsmodels
+- **Bayesian STS**: PyMC posterior inference with 80% credible intervals
+- **Change Point Detection**: PELT / Binary Segmentation via `ruptures`
 
-### Scenario Analysis
+#### Scenario Analysis
 - **Monte Carlo**: AR(1)+GARCH(1,1) Student-t DGP
 - **Stress Tests**: Volatility multiplier scenarios with tail probabilities
 - **Fan Charts**: Percentile-band forward projections
 
+### Analytical Platform (`frontend/`)
+
+A Bloomberg Terminal × Linear aesthetic dark-theme web application built with Next.js 16, featuring:
+
+- **5 Analysis Pages** following a WHY → HOW → WHAT → SO WHAT → NOW WHAT narrative structure
+- **20 Chart Components** (Plotly, dynamically imported, SSR-safe)
+- **9 Narrative Components** (KaTeX formulas, read guides, parameter tooltips, insight cards)
+- **20 API Hooks** (TanStack Query v5 with automatic caching and refetch)
+- **Institutional Finance Design System** (oklch colors, Inter + JetBrains Mono fonts)
+
+#### Page Overview
+
+| Page | Content | Key Methods |
+|------|---------|-------------|
+| `/analysis/overview` | Spread time series, KDE distribution, term structure | Data statistics, ADF test |
+| `/analysis/volatility` | GARCH tournament, FIGARCH, residual diagnostics | GARCH/EGARCH/GJR/FIGARCH |
+| `/analysis/risk` | VaR comparison, EVT analysis, backtesting | Historical/Parametric/EVT VaR |
+| `/analysis/regimes` | HMM + Kalman + STS + Bayesian + CPD + MarketGauge | 6 state detection methods |
+| `/analysis/scenarios` | Fan charts, Monte Carlo paths, stress tests | AR(1)+GARCH MC simulation |
+
 ## Quick Start
 
+### Prerequisites
+- Python 3.13+, Node.js 22+
+- macOS / Linux (Wind integration requires macOS/Windows)
+
 ### Installation
+
 ```bash
-# Clone and install
+# Clone and install Python package
 git clone https://github.com/quinnmacro/CNLocalGovSpread.git
 cd CNLocalGovSpread
 pip install -e ".[dev]"
 
-# With ML support
-pip install -e ".[ml]"
-
-# With Wind data
-pip install -e ".[wind]"
+# Install frontend dependencies
+cd frontend
+npm install
 ```
 
 ### Data Sources
+
 Configure via environment variable `CLS_DATA__SOURCE`:
-- `mock` — AR(1)+GARCH synthetic data (default for development)
-- `csv` — load from local CSV file
-- `wind` — Wind Financial Terminal EDB (requires WindPy)
+
+| Source | Description |
+|--------|-------------|
+| `mock` | AR(1)+GARCH synthetic data (default for development) |
+| `csv` | Load from local CSV file |
+| `wind` | Wind Financial Terminal EDB (requires WindPy) |
 
 ```bash
 export CLS_DATA__SOURCE=mock  # or csv, wind
 export CLS_DATA__CSV_PATH=data/spreads.csv
 ```
 
-### Run Dashboard
-```bash
-python scripts/run_dashboard.py --port 8050 --debug
-# or
-cls-dashboard
-```
+### Run Development Servers
 
-### Run API
 ```bash
-uvicorn api.app:app --reload --port 8000
-# or
-cls-api
+# Terminal 1: Backend API (FastAPI)
+cd /path/to/CNLocalGovSpread
+CLS_DATA__SOURCE=mock python3.13 -m uvicorn api.app:app --host 127.0.0.1 --port 8000 --reload
+
+# Terminal 2: Frontend (Next.js)
+cd /path/to/CNLocalGovSpread/frontend
+npm run dev
+# → http://localhost:3000
 ```
 
 ### Run Tests
+
 ```bash
-pytest tests/ -v
+# Python tests (must remain 53 passed)
+python3.13 -m pytest tests/ -v
+
+# TypeScript type checking (must be 0 errors)
+cd frontend && npx tsc --noEmit
+
+# Next.js production build
+cd frontend && npx next build
 ```
+
+## API Reference
+
+The REST API exposes 21 endpoints under `/api/v1/`. The frontend proxies all requests via `next.config.ts` rewrites.
+
+### Endpoint Groups
+
+| Group | Endpoints | Description |
+|-------|-----------|-------------|
+| **Data** | `/health`, `/data/summary`, `/data/raw`, `/data/statistics` | Health check, data overview, raw data, statistics |
+| **Models** | `/models/fit`, `/models/tournament`, `/models/{name}/detail`, `/models/figarch`, `/models/fit-custom` | Volatility model fitting and comparison |
+| **Risk** | `/risk/metrics`, `/risk/evt`, `/risk/backtest` | VaR, EVT analysis, backtesting |
+| **Regimes** | `/regimes/hmm`, `/regimes/kalman-signal`, `/regimes/sts-signal`, `/regimes/bayesian-sts`, `/regimes/changepoints`, `/market/gauge` | State detection (6 methods) |
+| **Scenarios** | `/scenarios/generate`, `/scenarios/stress`, `/analysis/sensitivity` | Monte Carlo, stress tests, sensitivity |
+
+Full endpoint details with request/response schemas: see [`HANDOFF-v4.1.md`](HANDOFF-v4.1.md) §2.
 
 ## Configuration
 
@@ -121,8 +180,7 @@ All settings use Pydantic v2 `BaseSettings` with environment variable prefix `CL
 | `CLS_DATA__START_DATE` | `2018-01-01` | Start date filter |
 | `CLS_RISK__CONFIDENCE` | `0.99` | VaR confidence level |
 | `CLS_RISK__HORIZON` | `252` | Forecast horizon (days) |
-| `CLS_DASHBOARD__PORT` | `8050` | Dashboard port |
-| `CLS_DASHBOARD__HOST` | `127.0.0.1` | Dashboard host |
+| `CLS_DASHBOARD__PORT` | `8050` | Legacy dashboard port |
 
 ## Design Principles
 
@@ -132,7 +190,8 @@ All settings use Pydantic v2 `BaseSettings` with environment variable prefix `CL
 4. **Structured logging** — no `print()`, always `get_logger(__name__)`
 5. **Graceful degradation** — optional deps (XGBoost, WindPy, hmmlearn) with clean fallbacks
 6. **Self-contained reports** — HTML with embedded Plotly, no CDN dependency
-
+7. **Narrative structure** — every analysis page follows WHY → HOW → WHAT → SO WHAT → NOW WHAT
+8. **TypeScript strict** — no `any`, all API responses fully typed
 
 ## Wind 数据集成
 
@@ -160,25 +219,6 @@ with WindClient() as client:
 - ✅ 增量更新支持（检测已有 CSV 最新日期）
 - ✅ Wind 异常值清洗（-999, 999, -9999 占位符）
 
-### 下载脚本
-
-```bash
-# 全量下载（2018 至今）
-python scripts/download_data.py
-
-# 指定日期范围
-python scripts/download_data.py --start 2024-01-01 --end 2026-08-01
-
-# 增量更新（检测 data/local_gov_spread.csv 最新日期）
-python scripts/download_data.py --incremental
-
-# 同时下载信用利差对比数据（需配置 CREDIT_SPREAD_CODES）
-python scripts/download_data.py --credit
-
-# 自定义 Wind 路径
-python scripts/download_data.py --wind-path "/custom/path/to/wind"
-```
-
 ### EDB 指标代码
 
 | 代码 | 含义 | DataFrame 列名 |
@@ -188,31 +228,27 @@ python scripts/download_data.py --wind-path "/custom/path/to/wind"
 | M0017144 | 地方债 10Y 信用利差 | spread_10y |
 | M0017145 | 地方债 30Y 信用利差 | spread_30y |
 
-**信用利差对比指标**（企业债/中票 AAA 各期限）需要在 `src/core/wind_client.py` 中填入实际 Wind EDB 代码：
+### 下载脚本
 
-```python
-CREDIT_SPREAD_CODES = {
-    "credit_corp_aaa_3y":  "M00XXXXX",  # 企业债AAA 3Y
-    "credit_corp_aaa_5y":  "M00XXXXX",  # 企业债AAA 5Y
-    # ... 更多指标
-}
+```bash
+# 全量下载（2018 至今）
+python scripts/download_data.py
+
+# 增量更新
+python scripts/download_data.py --incremental
+
+# 指定日期范围
+python scripts/download_data.py --start 2024-01-01 --end 2026-08-01
 ```
 
-### 数据流
+## Documentation
 
-```
-Wind EDB → WindClient.fetch_edb() → DataEngine.load() → DataEngine.clean()
-  ↓                                                              ↓
-原始数据                                                   MAD 异常值清洗
-                                                        + 前向填充 (ffill)
-                                                        + 后向填充 (bfill)
-```
-
-### 环境要求
-
-- **macOS**: Wind Financial Terminal + Python API (`/Applications/Wind API.app/Contents/python`)
-- **Windows**: Wind.NET Client + Python API (`C:\Wind\Wind.NET.Client\WindNET\x64`)
-- **Linux**: 不支持（Wind 仅提供 macOS/Windows 版本）
+| Document | Description |
+|----------|-------------|
+| [`HANDOFF-v4.1.md`](HANDOFF-v4.1.md) | **Current handoff** — complete project state, API catalog, component reference |
+| [`CHANGELOG.md`](CHANGELOG.md) | Version history from v1.0 to v4.1 |
+| [`frontend/README.md`](frontend/README.md) | Frontend development guide and component catalog |
+| [`HANDOFF-v4.md`](HANDOFF-v4.md) | Previous handoff (Phase 1–2, superseded) |
 
 ## License
 
