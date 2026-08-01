@@ -26,6 +26,9 @@ export const queryKeys = {
   scenarios: (horizon: number, nPaths: number) =>
     ["scenarios", "generate", horizon, nPaths] as const,
   sensitivity: ["analysis", "sensitivity"] as const,
+  kalmanSignal: (column: string) => ["regimes", "kalman", column] as const,
+  changepoints: (column: string, method: string) =>
+    ["regimes", "changepoints", column, method] as const,
 } as const;
 
 // ─── Data hooks ─────────────────────────────────────────────────────
@@ -195,6 +198,34 @@ export function useSensitivity(opts?: Omit<UseQueryOptions<T.SensitivityResponse
   return useQuery({
     queryKey: queryKeys.sensitivity,
     queryFn: api.sensitivity,
+    staleTime: 5 * 60 * 1000,
+    ...opts,
+  });
+}
+
+// ─── Regime advanced hooks ─────────────────────────────────────────
+
+export function useKalmanSignal(
+  column = "spread_all",
+  opts?: Omit<UseQueryOptions<T.KalmanSignalResponse>, "queryKey" | "queryFn">
+) {
+  return useQuery({
+    queryKey: queryKeys.kalmanSignal(column),
+    queryFn: () => api.kalmanSignal(column),
+    staleTime: 5 * 60 * 1000,
+    ...opts,
+  });
+}
+
+export function useChangepoints(
+  column = "spread_all",
+  method = "binseg",
+  nBkps = 5,
+  opts?: Omit<UseQueryOptions<T.ChangepointResponse>, "queryKey" | "queryFn">
+) {
+  return useQuery({
+    queryKey: queryKeys.changepoints(column, method),
+    queryFn: () => api.changepoints(column, method, nBkps),
     staleTime: 5 * 60 * 1000,
     ...opts,
   });

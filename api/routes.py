@@ -16,6 +16,8 @@ from pydantic import BaseModel
 
 from api.schemas import (
     BacktestResponse,
+    ChangepointResponse,
+    ChangepointSegment,
     ChristoffersenTest,
     ColumnStatistics,
     CustomFitRequest,
@@ -27,6 +29,7 @@ from api.schemas import (
     HillEstimate,
     HillInfo,
     HmmResponse,
+    KalmanSignalResponse,
     KupiecTest,
     MeanExcessPoint,
     ModelDetailResponse,
@@ -841,5 +844,118 @@ async def sensitivity_analysis() -> SensitivityResponse:
             base_value=_safe_float(base_value),
             variables=variables,
         )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---- 11. Kalman Signal Extraction ----
+
+
+@router.get("/regimes/kalman-signal", response_model=KalmanSignalResponse)
+async def kalman_signal(
+    column: str = Query(default="spread_all", description="Spread column to analyse"),
+) -> KalmanSignalResponse:
+    """Kalman filter signal extraction (Local Level Model)."""
+    try:
+        df = _get_data()
+        df = df.set_index("date")
+        df.index = pd.to_datetime(df.index)
+
+        if column not in df.columns:
+            raise HTTPException(status_code=400, detail=f"Column '{column}' not found")
+
+        spread = df[column].dropna()
+
+        from src.models.kalman import KalmanSignalExtractor
+
+        extractor = KalmanSignalExtractor()
+        extractor.fit(spread)
+        result = extractor.result
+
+        # Retrieve fitted parameters from the internal model
+        fitted = extractor._fitted_model
+        sigma2_eta = _safe_float(fitted.params[0])
+        sigma2_eps = _safe_float(fitted.params[1])
+        q_ratio = sigma2_eta / max(sigma2_eps, 1e-12)
+
+        return KalmanSignalResponse(
+            signal=_series_to_timepoints(result.signal),
+            deviation=_series_to_timepoints(result.deviation),
+            deviation_zscore=_series_to_timepoints(result.deviation_zscore),
+            signal_strength=_safe_float(result.signal_strength),
+            is_overvalued=bool(result.is_overvalued),
+            is_undervalued=bool(result.is_undervalued),
+            sigma2_eta=sigma2_eta,
+            sigma2_eps=sigma2_eps,
+            q_ratio=_safe_float(q_ratio),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---- 12. Change Point Detection ----
+
+
+@router.get("/regimes/changepoints", response_model=ChangepointResponse)
+async def changepoints(
+    column: str = Query(default="spread_all", description="Spread column to analyse"),
+    method: str = Query(default="binseg", pattern="^(pelt|binseg)$"),
+    n_bkps: int = Query(default=5, ge=2, le=15, description="Number of breakpoints (binseg only)"),
+    pen: float = Query(default=10.0, gt=0, description="Penalty for PELT"),
+) -> ChangepointResponse:
+    """Structural change point detection via PELT or Binary Segmentation."""
+    try:
+        import ruptures as rpt
+
+        df = _get_data()
+        df = df.set_index("date")
+        df.index = pd.to_datetime(df.index)
+
+        if column not in df.columns:
+            raise HTTPException(status_code=400, detail=f"Column '{column}' not found")
+
+        spread = df[column].dropna()
+        signal = spread.values.astype("float64")
+        dates = spread.index
+
+        if method == "pelt":
+            algo = rpt.Pelt(model="rbf", min_size=30).fit(signal)
+            bkps = algo.predict(pen=pen)
+        else:
+            algo = rpt.Binseg(model="l2", min_size=60).fit(signal)
+            bkps = algo.predict(n_bkps=n_bkps)
+
+        # bkps always ends with len(signal)
+        breakpoints = [b for b in bkps if b < len(signal)]
+        breakpoint_dates = [str(dates[b].date()) for b in breakpoints]
+
+        # Build segments
+        edges = [0] + bkps
+        segments: list[ChangepointSegment] = []
+        for i in range(len(edges) - 1):
+            seg_data = signal[edges[i]:edges[i + 1]]
+            start_date = str(dates[edges[i]].date()) if edges[i] < len(dates) else str(dates[-1].date())
+            end_idx = edges[i + 1] - 1
+            end_date = str(dates[min(end_idx, len(dates) - 1)].date())
+            segments.append(ChangepointSegment(
+                start_idx=int(edges[i]),
+                end_idx=int(edges[i + 1]),
+                start_date=start_date,
+                end_date=end_date,
+                mean=_safe_float(float(seg_data.mean())),
+                std=_safe_float(float(seg_data.std())) if len(seg_data) > 1 else 0.0,
+            ))
+
+        return ChangepointResponse(
+            method=str(method),
+            breakpoints=breakpoints,
+            breakpoint_dates=breakpoint_dates,
+            segments=segments,
+            n_segments=len(segments),
+        )
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))

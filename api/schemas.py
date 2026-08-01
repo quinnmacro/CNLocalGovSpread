@@ -277,3 +277,44 @@ class CustomFitRequest(BaseModel):
     p: int = Field(default=1, ge=1, le=5)
     q: int = Field(default=1, ge=1, le=5)
     dist: str = Field(default="studentst", pattern="^(normal|studentst|skewt)$")
+
+
+# --- Kalman Signal ---
+
+
+class KalmanSignalResponse(BaseModel):
+    """Response for GET /regimes/kalman-signal."""
+
+    signal: list[TimePoint] = Field(default_factory=list)
+    deviation: list[TimePoint] = Field(default_factory=list)
+    deviation_zscore: list[TimePoint] = Field(default_factory=list)
+    signal_strength: float
+    is_overvalued: bool
+    is_undervalued: bool
+    sigma2_eta: float = Field(description="State transition variance")
+    sigma2_eps: float = Field(description="Observation noise variance")
+    q_ratio: float = Field(description="Signal-to-noise ratio σ²_η / σ²_ε")
+
+
+# --- Change Points ---
+
+
+class ChangepointSegment(BaseModel):
+    """A single segment between two changepoints."""
+
+    start_idx: int
+    end_idx: int
+    start_date: str
+    end_date: str
+    mean: float
+    std: float
+
+
+class ChangepointResponse(BaseModel):
+    """Response for GET /regimes/changepoints."""
+
+    method: str = Field(description="Detection method (pelt or binseg)")
+    breakpoints: list[int] = Field(default_factory=list, description="Breakpoint indices")
+    breakpoint_dates: list[str] = Field(default_factory=list)
+    segments: list[ChangepointSegment] = Field(default_factory=list)
+    n_segments: int
