@@ -21,8 +21,15 @@ def _result_card(name: str, result) -> dbc.Card:
         metrics.append(html.Li(f"AIC: {result.aic:.2f}"))
     if result.bic is not None:
         metrics.append(html.Li(f"BIC: {result.bic:.2f}"))
-    metrics.append(html.Li(f"RMSE: {result.rmse:.4f}"))
-    metrics.append(html.Li(f"MAE: {result.mae:.4f}"))
+    if result.persistence is not None:
+        metrics.append(html.Li(f"α+β: {result.persistence:.4f}"))
+    if result.diagnostics is not None:
+        d = result.diagnostics
+        arch = "Yes ⚠" if d.has_arch_effects else "No ✓"
+        normal = "Yes ✓" if d.is_normal else "No ⚠"
+        metrics.append(html.Li(f"ARCH效应: {arch}"))
+        metrics.append(html.Li(f"正态性: {normal}"))
+
     status = "✓" if result.converged else "✗"
     color = "success" if result.converged else "danger"
 
@@ -44,7 +51,7 @@ def layout():
     vol_series = {}
     for name, m in models.items():
         try:
-            vol_series[name] = m.result.volatility
+            vol_series[name] = m.result.conditional_volatility
         except Exception:
             pass
 
@@ -52,18 +59,13 @@ def layout():
     chart = volatility_comparison(returns, vol_series, title="波动率模型对比")
 
     # Tournament table
-    tour_cols = [
-        {"name": "Model", "id": "model"},
-        {"name": "AIC", "id": "aic", "type": "numeric", "format": {"specifier": ".2f"}},
-        {"name": "BIC", "id": "bic", "type": "numeric", "format": {"specifier": ".2f"}},
-        {"name": "RMSE", "id": "rmse", "type": "numeric", "format": {"specifier": ".4f"}},
-        {"name": "MAE", "id": "mae", "type": "numeric", "format": {"specifier": ".4f"}},
-        {"name": "Converged", "id": "converged"},
-    ]
-    tour_data = tournament.copy()
-    for col in ("aic", "bic", "rmse", "mae"):
-        if col in tour_data.columns:
-            tour_data[col] = tour_data[col].round(4)
+    if tournament is not None and not tournament.empty:
+        tour_display = tournament.reset_index()
+        tour_cols = [{"name": c, "id": c} for c in tour_display.columns]
+        tour_data = tour_display.to_dict("records")
+    else:
+        tour_cols = []
+        tour_data = []
 
     # Model cards
     model_cards = [_result_card(name, m.result) for name, m in models.items()]
@@ -73,7 +75,7 @@ def layout():
             dbc.Col([
                 html.H2("波动率模型分析", className="fw-bold"),
                 html.P(
-                    "GARCH族 / EWMA / 机器学习模型拟合比较 · 信息准则与预测精度",
+                    "GARCH族 / EWMA / 机器学习模型拟合比较 · 信息准则与残差诊断",
                     className="text-muted",
                 ),
             ]),
@@ -91,7 +93,7 @@ def layout():
                     dbc.CardHeader(html.H5("模型锦标赛排名", className="mb-0")),
                     dbc.CardBody([
                         dash_table.DataTable(
-                            data=tour_data.to_dict("records"),
+                            data=tour_data,
                             columns=tour_cols,
                             sort_action="native",
                             style_table={"overflowX": "auto"},
@@ -100,17 +102,12 @@ def layout():
                                 "color": "#e2e8f0",
                                 "border": "1px solid #334155",
                                 "textAlign": "center",
+                                "fontSize": "12px",
                             },
                             style_header={
                                 "backgroundColor": "#0f172a",
                                 "fontWeight": "bold",
                             },
-                            style_data_conditional=[
-                                {
-                                    "if": {"column_id": "converged", "filter_query": "{converged} eq True"},
-                                    "color": "#22c55e",
-                                },
-                            ],
                         ),
                     ]),
                 ], color="dark", className="border-0 shadow-sm"),

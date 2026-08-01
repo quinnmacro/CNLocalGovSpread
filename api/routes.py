@@ -146,7 +146,7 @@ async def data_raw(
 
 @router.get("/models/fit")
 async def fit_models(
-    model_type: str = Query(default="garch", regex="^(garch|egarch|gjr|ewma)$"),
+    model_type: str = Query(default="garch", pattern="^(garch|egarch|gjr|ewma)$"),
 ) -> ModelResult:
     try:
         returns = _get_returns()

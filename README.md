@@ -1,4 +1,6 @@
 # 中国地方政府债券利差高级计量经济学框架
+
+> 中国地方政府债券利差的计量经济学分析框架
 ## Advanced Econometric Framework for China Local Government Bond Spread Analysis
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
@@ -283,3 +285,7 @@ MIT License - 详见 LICENSE 文件
 ---
 
 *"Let the data speak, and let the models compete."*
+
+---
+
+<sub>Last updated: 2026-08-01 · Status: 🟢 Active</sub>

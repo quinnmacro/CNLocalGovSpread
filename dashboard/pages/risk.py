@@ -1,11 +1,11 @@
 """
-Risk page: VaR comparison, EVT diagnostics, Hill estimator.
+Risk page: VaR comparison, EVT diagnostics, tail analysis.
 """
 
 from __future__ import annotations
 
+import numpy as np
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 import dash
 import dash_bootstrap_components as dbc
@@ -17,28 +17,36 @@ from dashboard.components.charts import COLORS, DARK_LAYOUT, var_comparison_char
 dash.register_page(__name__, path="/risk", name="Risk")
 
 
-def _hill_chart(evt) -> go.Figure:
-    """Hill estimator plot: tail index vs k."""
-    hill_data = evt.hill_estimator(k_percentile=0.15)
-    ks = hill_data.get("k_values", [])
-    xis = hill_data.get("xi_values", [])
+def _tail_index_chart(evt) -> go.Figure:
+    """Plot tail index estimates at different percentiles."""
+    percentiles = np.arange(0.05, 0.25, 0.01)
+    xi_vals = []
+    for p in percentiles:
+        try:
+            h = evt.hill_estimator(k_percentile=float(p))
+            xi_vals.append(h.get("shape", 0))
+        except Exception:
+            xi_vals.append(np.nan)
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
-        x=ks, y=xis,
-        mode="lines",
+        x=list(percentiles), y=xi_vals,
+        mode="lines+markers",
         name="ξ(k)",
         line=dict(color=COLORS["primary"], width=2),
+        marker=dict(size=4),
     ))
-    if xis:
-        mean_xi = sum(xis) / len(xis)
+
+    valid = [v for v in xi_vals if not np.isnan(v)]
+    if valid:
+        mean_xi = np.mean(valid)
         fig.add_hline(y=mean_xi, line_dash="dash", line_color=COLORS["warning"],
                       annotation_text=f"mean ξ = {mean_xi:.3f}")
 
     fig.update_layout(
         **DARK_LAYOUT,
-        title="Hill Estimator: Tail Index ξ(k)",
-        xaxis_title="k (number of upper order statistics)",
+        title="Hill Estimator: Tail Index ξ at Different Thresholds",
+        xaxis_title="Percentile (k/n)",
         yaxis_title="ξ (tail index)",
         height=350,
     )
@@ -71,13 +79,12 @@ def _mean_excess_chart(evt) -> go.Figure:
 def _var_metric_card(name: str, result: dict) -> dbc.Card:
     var_val = result["var"]
     es_val = result.get("es", var_val)
-    method = result.get("method", name)
 
     extra = []
     if "df" in result:
         extra.append(html.P(f"df = {result['df']:.2f}", className="small text-muted mb-0"))
-    if "gpd_shape" in result:
-        xi = result.get("gpd_shape", 0)
+    if "gpd_shape" in result and result["gpd_shape"] is not None:
+        xi = result["gpd_shape"]
         extra.append(html.P(f"GPD ξ = {xi:.4f}", className="small text-muted mb-0"))
 
     return dbc.Card([
@@ -98,8 +105,13 @@ def layout():
     var_chart = var_comparison_chart(var_results, confidence=0.99)
 
     # EVT diagnostic plots
-    hill_fig = _hill_chart(evt)
+    hill_fig = _tail_index_chart(evt)
     me_fig = _mean_excess_chart(evt)
+
+    # Hill summary
+    hill = evt.hill_estimator()
+    tail_index = hill.get("tail_index", float("inf"))
+    xi = hill.get("shape", 0)
 
     # Metric cards
     cards = [_var_metric_card(name, r) for name, r in var_results.items()]
@@ -115,12 +127,39 @@ def layout():
             ]),
         ], className="mb-4"),
 
+        # Summary
+        dbc.Row([
+            dbc.Col([
+                dbc.Card(dbc.CardBody([
+                    html.P("Tail Index (α = 1/ξ)", className="text-muted small mb-1"),
+                    html.H4(f"{tail_index:.2f}" if np.isfinite(tail_index) else "∞",
+                            className="text-warning fw-bold mb-0"),
+                ]), color="dark", className="border-0 shadow-sm"),
+            ], width=3),
+            dbc.Col([
+                dbc.Card(dbc.CardBody([
+                    html.P("GPD Shape ξ", className="text-muted small mb-1"),
+                    html.H4(f"{xi:.4f}", className="text-info fw-bold mb-0"),
+                ]), color="dark", className="border-0 shadow-sm"),
+            ], width=3),
+            dbc.Col([
+                dbc.Card(dbc.CardBody([
+                    html.P("Hill Threshold", className="text-muted small mb-1"),
+                    html.H4(f"{hill.get('threshold', 0):.4f}", className="text-primary fw-bold mb-0"),
+                ]), color="dark", className="border-0 shadow-sm"),
+            ], width=3),
+            dbc.Col([
+                dbc.Card(dbc.CardBody([
+                    html.P("Upper Order Stats (k)", className="text-muted small mb-1"),
+                    html.H4(f"{hill.get('k', 0)}", className="text-success fw-bold mb-0"),
+                ]), color="dark", className="border-0 shadow-sm"),
+            ], width=3),
+        ], className="mb-4"),
+
         # VaR comparison
         dbc.Row([
             dbc.Col(dcc.Graph(figure=var_chart), width=8),
-            dbc.Col([
-                *cards,
-            ], width=4),
+            dbc.Col(cards, width=4),
         ], className="mb-4"),
 
         # EVT diagnostics

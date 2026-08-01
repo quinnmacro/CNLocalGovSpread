@@ -97,7 +97,7 @@ def get_regime_result():
         returns = get_returns()
         ewma = EWMAModel()
         ewma.fit(returns)
-        vol = ewma.result.volatility
+        vol = ewma.result.conditional_volatility
         det = HMMRegimeDetector(n_regimes=3)
         _CACHE["regime"] = (det.fit(vol), vol)
     return _CACHE["regime"]
