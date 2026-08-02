@@ -254,3 +254,54 @@ export function useBayesianSts(
     ...opts,
   });
 }
+
+// ─── Volatility Advanced hooks ─────────────────────────────────────
+
+export function useHarRv(
+  column = "spread_all",
+  opts?: Omit<UseQueryOptions<T.HARRVResponse>, "queryKey" | "queryFn">
+) {
+  return useQuery({
+    queryKey: ["volatility", "har-rv", column] as const,
+    queryFn: () => api.harRv(column),
+    staleTime: 5 * 60 * 1000,
+    ...opts,
+  });
+}
+
+export function useStochasticVol(
+  column = "spread_all",
+  opts?: Omit<UseQueryOptions<T.StochasticVolResponse>, "queryKey" | "queryFn">
+) {
+  return useQuery({
+    queryKey: ["volatility", "stochastic-vol", column] as const,
+    queryFn: () => api.stochasticVol(column),
+    staleTime: 5 * 60 * 1000,
+    ...opts,
+  });
+}
+
+export function useGas(
+  column = "spread_all",
+  opts?: Omit<UseQueryOptions<T.GASResponse>, "queryKey" | "queryFn">
+) {
+  return useQuery({
+    queryKey: ["volatility", "gas", column] as const,
+    queryFn: () => api.gas(column),
+    staleTime: 5 * 60 * 1000,
+    ...opts,
+  });
+}
+
+export function useMsGarch(
+  column = "spread_all",
+  nRegimes = 2,
+  opts?: Omit<UseQueryOptions<T.MSGARCHResponse>, "queryKey" | "queryFn">
+) {
+  return useQuery({
+    queryKey: ["volatility", "ms-garch", column, nRegimes] as const,
+    queryFn: () => api.msGarch(column, nRegimes),
+    staleTime: 5 * 60 * 1000,
+    ...opts,
+  });
+}
