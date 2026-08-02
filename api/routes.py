@@ -452,6 +452,28 @@ async def model_tournament() -> TournamentResponse:
         figarch.fit(returns)
         models_to_fit["FIGARCH"] = figarch
 
+        # Phase 6: Add 4 modern models
+        from src.models.har_rv import HARRVModel
+        from src.models.stochastic_vol import StochasticVolModel
+        from src.models.gas_volatility import GASVolModel
+        from src.models.ms_garch import MSGARCHModel
+
+        har_rv = HARRVModel()
+        har_rv.fit(returns)
+        models_to_fit["HAR-RV"] = har_rv
+
+        sv = StochasticVolModel(n_advi_steps=2000, n_samples=100)
+        sv.fit(returns)
+        models_to_fit["StochasticVol"] = sv
+
+        gas = GASVolModel(dist="studentst")
+        gas.fit(returns)
+        models_to_fit["GAS"] = gas
+
+        ms_garch = MSGARCHModel(n_regimes=2)
+        ms_garch.fit(returns)
+        models_to_fit["MS-GARCH"] = ms_garch
+
         # Run tournament
         tournament = ModelTournament()
         for name, m in models_to_fit.items():
