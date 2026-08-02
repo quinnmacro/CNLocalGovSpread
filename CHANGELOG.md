@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [5.1.0] - 2026-08-02
+
+### Phase 6: Volatility Page Modernization — From "1986 Textbook" to "2020s Frontier"
+
+#### Added — Backend (4 New Volatility Models)
+- **HAR-RV model** (`src/models/har_rv.py`, ~230L): Heterogeneous Autoregressive Realized Volatility (Corsi 2009). Three-window OLS on rolling realized variance (1d/5d/22d). Captures heterogeneous time horizons of market participants.
+- **Quasi-Bayesian Stochastic Volatility** (`src/models/stochastic_vol.py`, ~460L): Kalman smoother on log-squared transformation with Yule-Walker AR(1) estimation. Provides posterior mean + 80% credible interval bands. Falls back to EWMA if needed. PyMC ADVI path preserved for offline batch use (`n_advi_steps > 5000`).
+- **GAS Volatility** (`src/models/gas_volatility.py`, ~290L): Generalized Autoregressive Score model (Creal et al. 2013). Score-driven update rule generalizes GARCH; Student-t distribution auto-downweights extreme observations. QMLE via L-BFGS-B.
+- **MS-GARCH** (`src/models/ms_garch.py`, ~340L): Markov-Switching GARCH. HMM on |r| identifies volatility regimes; regime-weighted GARCH parameters. Bridges regimes page with volatility analysis.
+
+All 4 models implement `VolatilityModel` ABC (`fit`, `conditional_variance`, `forecast`, `diagnose`).
+
+#### Added — API Layer (4 New Endpoints)
+- `GET /volatility/har-rv` — HAR-RV decomposition with β_0, β_d, β_w, β_m, R²
+- `GET /volatility/stochastic-vol` — Quasi-Bayesian SV with vol_lower/vol_upper CI bands (28ms response)
+- `GET /volatility/gas` — GAS(1,1) with score series, A/B params, ν degrees of freedom
+- `GET /volatility/ms-garch` — MS-GARCH with regime labels, regime params, transition matrix
+- 5 new Pydantic schemas in `api/schemas.py`: `HARRVResponse`, `StochasticVolResponse`, `GASResponse`, `MSRegimeInfo`, `MSGARCHResponse`
+
+#### Added — Frontend (5 New Chart Components)
+- **`har-rv-decomposition.tsx`**: 3-line chart (daily/weekly/monthly RV) + fitted σ² overlay
+- **`stochastic-vol-band.tsx`**: Posterior mean volatility + 80% credible interval fill band
+- **`gas-score-dynamics.tsx`**: Dual-panel — conditional volatility (upper) + score update bars colored green/red (lower)
+- **`ms-garch-regimes.tsx`**: Scatter plot colored by HMM regime (green=low vol, yellow=high, red=extreme)
+- **`volatility-model-comparison.tsx`**: Overlay all models' conditional volatility on single chart
+
+#### Changed — Frontend (Volatility Page Rewrite)
+- **`volatility-content.tsx`** rewritten from 412 lines to 879 lines:
+  - 5-section narrative structure: WHY / HOW / WHAT / SO WHAT / NOW WHAT
+  - `useScrollSpy` + right-side sticky TOC (matching regimes page pattern)
+  - KaTeX `<Formula>` blocks for all 8 model equations (GARCH, EGARCH, GJR, EWMA, FIGARCH, HAR-RV, SV, GAS, MS-GARCH)
+  - `<ReadGuide>` for every chart panel
+  - `<ParamTooltip>` for key parameters (μ, φ, σ_η, A, B, ν, β_d, β_w, β_m)
+  - `<PageNavigation>` at bottom for cross-page navigation
+  - Tournament table expanded from 5 to 8-9 models
+  - Back-to-top button
+  - 5 new chart panels integrated with narrative
+
+#### Added — Frontend Infrastructure
+- 5 new TypeScript interfaces in `frontend/lib/types.ts`: `HARRVResponse`, `StochasticVolResponse`, `GASResponse`, `MSRegimeInfo`, `MSGARCHResponse`
+- 4 new API client methods in `frontend/lib/api.ts`: `harRv`, `stochasticVol`, `gas`, `msGarch`
+- 4 new TanStack Query hooks in `frontend/hooks/use-api.ts`: `useHarRv`, `useStochasticVol`, `useGas`, `useMsGarch`
+
+#### Verification
+- ✅ `npx tsc --noEmit`: 0 errors
+- ✅ `npx next build`: success (all 7 routes static, Turbopack)
+- ✅ `python3 -m pytest tests/ -q`: 53 passed (2.62s, unchanged)
+- ✅ All 4 new API endpoints return HTTP 200 with valid JSON
+
+
 ## [4.1.0] - 2026-08-01
 
 ### Phase 5: Advanced State Space Methods + UI/UX Overhaul
