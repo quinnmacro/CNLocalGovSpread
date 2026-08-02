@@ -364,3 +364,87 @@ class BayesianSTSResponse(BaseModel):
     sigma_obs_mean: float = Field(description="Posterior mean of σ_obs")
     n_samples: int = Field(description="Number of posterior samples")
     fitting_time_sec: float = Field(description="ADVI fitting time in seconds")
+
+
+# --- HAR-RV ---
+
+
+class HARRVResponse(BaseModel):
+    """Response for GET /volatility/har-rv."""
+
+    model_name: str
+    params: dict[str, float]
+    r_squared: float = Field(description="OLS R² of HAR regression")
+    aic: Optional[float] = None
+    bic: Optional[float] = None
+    conditional_volatility: list[TimePoint] = Field(default_factory=list)
+    rv_daily: list[TimePoint] = Field(default_factory=list, description="Daily realised variance")
+    rv_weekly: list[TimePoint] = Field(default_factory=list, description="5-day rolling average RV")
+    rv_monthly: list[TimePoint] = Field(default_factory=list, description="22-day rolling average RV")
+    diagnostics: Optional[DiagnosticsInfo] = None
+
+
+# --- Stochastic Volatility ---
+
+
+class StochasticVolResponse(BaseModel):
+    """Response for GET /volatility/stochastic-vol."""
+
+    model_name: str
+    params: dict[str, float]
+    aic: Optional[float] = None
+    bic: Optional[float] = None
+    conditional_volatility: list[TimePoint] = Field(default_factory=list)
+    vol_lower: list[TimePoint] = Field(default_factory=list, description="10th percentile of posterior vol")
+    vol_upper: list[TimePoint] = Field(default_factory=list, description="90th percentile of posterior vol")
+    log_vol: list[TimePoint] = Field(default_factory=list, description="Posterior mean log-volatility")
+    fitting_time_sec: float = 0.0
+    diagnostics: Optional[DiagnosticsInfo] = None
+
+
+# --- GAS (Generalized Autoregressive Score) ---
+
+
+class GASResponse(BaseModel):
+    """Response for GET /volatility/gas."""
+
+    model_name: str
+    dist: str = Field(description="Distribution: 'normal' or 'studentst'")
+    params: dict[str, float]
+    aic: Optional[float] = None
+    bic: Optional[float] = None
+    conditional_volatility: list[TimePoint] = Field(default_factory=list)
+    score_series: list[TimePoint] = Field(default_factory=list, description="Score (driving force) time series")
+    diagnostics: Optional[DiagnosticsInfo] = None
+
+
+# --- MS-GARCH (Markov-Switching GARCH) ---
+
+
+class MSRegimeInfo(BaseModel):
+    """Per-regime GARCH parameters."""
+
+    regime: int
+    omega: float
+    alpha: float
+    beta: float
+    persistence: float
+    mean_abs_return: float
+
+
+class MSGARCHResponse(BaseModel):
+    """Response for GET /volatility/ms-garch."""
+
+    model_name: str
+    n_regimes: int
+    params: dict[str, float]
+    aic: Optional[float] = None
+    bic: Optional[float] = None
+    conditional_volatility: list[TimePoint] = Field(default_factory=list)
+    regime_labels: list[TimePoint] = Field(default_factory=list, description="Regime assignment (integer)")
+    regime_probs: list[dict[str, float]] = Field(default_factory=list, description="Filtered regime probabilities")
+    regime_params: list[MSRegimeInfo] = Field(default_factory=list)
+    transition_matrix: list[list[float]] = Field(default_factory=list)
+    current_regime: int
+    current_regime_name: str
+    diagnostics: Optional[DiagnosticsInfo] = None

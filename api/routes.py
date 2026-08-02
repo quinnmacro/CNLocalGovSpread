@@ -1067,3 +1067,184 @@ async def bayesian_sts(
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---- 15. HAR-RV Volatility ----
+
+
+@router.get("/volatility/har-rv")
+async def har_rv_volatility(
+    column: str = Query(default="spread_all", description="Spread column for returns"),
+) -> dict:
+    """Heterogeneous Autoregressive Realized Volatility (Corsi 2009)."""
+    try:
+        from api.schemas import HARRVResponse
+
+        returns = _get_returns()
+
+        from src.models.har_rv import HARRVModel
+
+        model = HARRVModel()
+        model.fit(returns)
+        result = model.result
+
+        diag_info = _build_diagnostics_info(model)
+
+        response = HARRVResponse(
+            model_name=result.model_name,
+            params={k: _safe_float(v) for k, v in result.params.items()},
+            r_squared=_safe_float(result.params.get("r_squared", 0.0)),
+            aic=_safe_float(result.aic) if result.aic is not None else None,
+            bic=_safe_float(result.bic) if result.bic is not None else None,
+            conditional_volatility=_series_to_timepoints(result.conditional_volatility),
+            rv_daily=_series_to_timepoints(model._rv_daily),
+            rv_weekly=_series_to_timepoints(model._rv_weekly),
+            rv_monthly=_series_to_timepoints(model._rv_monthly),
+            diagnostics=diag_info,
+        )
+        return response.model_dump()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---- 16. Stochastic Volatility ----
+
+
+@router.get("/volatility/stochastic-vol")
+async def stochastic_vol(
+    column: str = Query(default="spread_all", description="Spread column for returns"),
+    n_advi_steps: int = Query(default=2000, ge=1000, le=50000),
+    n_samples: int = Query(default=100, ge=50, le=500),
+) -> dict:
+    """Bayesian Stochastic Volatility model (Taylor 1986 / Kim-Shephard-Chib 1998)."""
+    try:
+        from api.schemas import StochasticVolResponse
+
+        returns = _get_returns()
+
+        from src.models.stochastic_vol import StochasticVolModel
+
+        model = StochasticVolModel(
+            n_advi_steps=n_advi_steps,
+            n_samples=n_samples,
+        )
+        model.fit(returns)
+        result = model.result
+
+        diag_info = _build_diagnostics_info(model)
+
+        response = StochasticVolResponse(
+            model_name=result.model_name,
+            params={k: _safe_float(v) for k, v in result.params.items()},
+            aic=_safe_float(result.aic) if result.aic is not None else None,
+            bic=_safe_float(result.bic) if result.bic is not None else None,
+            conditional_volatility=_series_to_timepoints(result.conditional_volatility),
+            vol_lower=_series_to_timepoints(model._vol_lower),
+            vol_upper=_series_to_timepoints(model._vol_upper),
+            log_vol=_series_to_timepoints(model._log_vol_mean),
+            fitting_time_sec=_safe_float(model._fitting_time),
+            diagnostics=diag_info,
+        )
+        return response.model_dump()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---- 17. GAS Volatility ----
+
+
+@router.get("/volatility/gas")
+async def gas_volatility(
+    column: str = Query(default="spread_all", description="Spread column for returns"),
+    dist: str = Query(default="studentst", pattern="^(normal|studentst)$"),
+) -> dict:
+    """Generalized Autoregressive Score (GAS) volatility model (Creal et al. 2013)."""
+    try:
+        from api.schemas import GASResponse
+
+        returns = _get_returns()
+
+        from src.models.gas_volatility import GASVolModel
+
+        model = GASVolModel(dist=dist)
+        model.fit(returns)
+        result = model.result
+
+        diag_info = _build_diagnostics_info(model)
+
+        response = GASResponse(
+            model_name=result.model_name,
+            dist=dist,
+            params={k: _safe_float(v) for k, v in result.params.items()},
+            aic=_safe_float(result.aic) if result.aic is not None else None,
+            bic=_safe_float(result.bic) if result.bic is not None else None,
+            conditional_volatility=_series_to_timepoints(result.conditional_volatility),
+            score_series=_series_to_timepoints(model._score_series),
+            diagnostics=diag_info,
+        )
+        return response.model_dump()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ---- 18. MS-GARCH ----
+
+
+@router.get("/volatility/ms-garch")
+async def ms_garch(
+    column: str = Query(default="spread_all", description="Spread column for returns"),
+    n_regimes: int = Query(default=2, ge=2, le=4),
+) -> dict:
+    """Markov-Switching GARCH model."""
+    try:
+        from api.schemas import MSGARCHResponse, MSRegimeInfo
+
+        returns = _get_returns()
+
+        from src.models.ms_garch import MSGARCHModel
+
+        model = MSGARCHModel(n_regimes=n_regimes)
+        model.fit(returns)
+        result = model.result
+
+        diag_info = _build_diagnostics_info(model)
+
+        # Build regime info
+        regime_infos = []
+        for k in range(model.n_regimes):
+            rp = model._regime_params[k]
+            regime_infos.append(MSRegimeInfo(
+                regime=k,
+                omega=_safe_float(rp["omega"]),
+                alpha=_safe_float(rp["alpha"]),
+                beta=_safe_float(rp["beta"]),
+                persistence=_safe_float(rp["alpha"] + rp["beta"]),
+                mean_abs_return=_safe_float(rp["regime_mean_abs"]),
+            ))
+
+        # Build regime labels as TimePoints
+        regime_labels = _series_to_timepoints(model._regime_labels.astype(float))
+
+        # Build regime probs as list of dicts
+        regime_probs = []
+        for _, row in model._regime_probs.iterrows():
+            regime_probs.append({k: _safe_float(v) for k, v in row.items()})
+
+        response = MSGARCHResponse(
+            model_name=result.model_name,
+            n_regimes=model.n_regimes,
+            params={k: _safe_float(v) for k, v in result.params.items()},
+            aic=_safe_float(result.aic) if result.aic is not None else None,
+            bic=_safe_float(result.bic) if result.bic is not None else None,
+            conditional_volatility=_series_to_timepoints(result.conditional_volatility),
+            regime_labels=regime_labels,
+            regime_probs=regime_probs,
+            regime_params=regime_infos,
+            transition_matrix=model._trans_matrix.tolist(),
+            current_regime=model._current_regime,
+            current_regime_name=model._current_regime_name,
+            diagnostics=diag_info,
+        )
+        return response.model_dump()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
