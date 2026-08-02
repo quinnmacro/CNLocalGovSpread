@@ -61,3 +61,17 @@ jobs:
 
       - name: Lint test modules
         run: flake8 tests/ --max-line-length=120 --ignore=E501,W503,E402,E226,F541,F401,F841,W504,E127,E131,E741,E712 --exclude=__pycache__ || echo 'Lint completed with warnings'
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: |
+          pip install -e ".[ml]" 2>/dev/null || pip install -e .
+          pip install mypy
+      - name: Type check with mypy
+        run: mypy src/ --ignore-missing-imports || echo "Type check completed with warnings (non-blocking)"
